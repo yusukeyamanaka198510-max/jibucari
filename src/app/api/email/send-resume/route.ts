@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server";
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = process.env.RESEND_FROM_EMAIL ?? "ジブキャリ <onboarding@resend.dev>";
+function createTransport() {
+  return nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_APP_PASSWORD,
+    },
+  });
+}
 
 export async function POST(req: Request) {
   try {
@@ -16,9 +23,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "メールアドレスが設定されていません" }, { status: 400 });
     }
 
-    const { error } = await resend.emails.send({
-      from: FROM,
-      to: [email],
+    const transporter = createTransport();
+
+    await transporter.sendMail({
+      from: `"ジブキャリ" <${process.env.GMAIL_USER}>`,
+      to: email,
       subject: "【ジブキャリ】履歴書PDFをお送りします",
       html: `
         <div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#222">
@@ -36,20 +45,15 @@ export async function POST(req: Request) {
       attachments: [
         {
           filename: `${name}_履歴書.pdf`,
-          content: pdfBase64,
+          content: Buffer.from(pdfBase64, "base64"),
           contentType: "application/pdf",
         },
       ],
     });
 
-    if (error) {
-      console.error("Resend error:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
     return NextResponse.json({ success: true });
   } catch (e) {
     console.error("send-resume error:", e);
-    return NextResponse.json({ error: "サーバーエラーが発生しました" }, { status: 500 });
+    return NextResponse.json({ error: "メール送信に失敗しました" }, { status: 500 });
   }
 }
