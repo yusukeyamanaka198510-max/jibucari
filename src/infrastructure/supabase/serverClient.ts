@@ -1,10 +1,6 @@
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-/**
- * Server Component / Route Handler 用 Supabase クライアント。
- * Cookie を Next.js の `cookies()` で読み書きすることで SSR でも認証状態を維持する。
- */
 export function createSupabaseServerClient() {
   const cookieStore = cookies();
   return createServerClient(
@@ -12,15 +8,17 @@ export function createSupabaseServerClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get: (name) => cookieStore.get(name)?.value,
-        set: (name, value, options) => {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name: string, value: string, options: CookieOptions) {
           try {
             cookieStore.set({ name, value, ...options });
           } catch {
             // Server Component の読み取り専用コンテキストではスキップ
           }
         },
-        remove: (name, options) => {
+        remove(name: string, options: CookieOptions) {
           try {
             cookieStore.set({ name, value: "", ...options });
           } catch {}
