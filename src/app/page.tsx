@@ -73,7 +73,7 @@ export default function HomePage() {
 
       {/* ── Hero ───────────────────────────────────────── */}
       <section
-        className="relative pt-32 pb-28 px-5 text-center overflow-hidden"
+        className="relative pt-32 pb-10 px-5 text-center overflow-hidden"
         style={{
           background:
             "radial-gradient(ellipse 90% 60% at 50% -10%, rgba(99,102,241,0.12) 0%, transparent 70%)",
