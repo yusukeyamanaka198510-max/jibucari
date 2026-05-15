@@ -12,50 +12,39 @@ import type {
 import {
   createResume,
   createEducationEntry,
+  createEducationFromBirthDate,
   createWorkEntry,
   createLicenseEntry,
 } from "@/domain/entities/resume";
 
-// ─── State 型 ─────────────────────────────────────────────────────────────────
 interface ResumeState {
-  /** 現在編集中の履歴書 */
   current: Resume | null;
-  /** 保存済み履歴書の一覧 */
   saved: Resume[];
-  /** 自動保存の処理状態 */
   autoSaveStatus: "idle" | "saving" | "saved" | "error";
 }
 
-// ─── Action 型 ────────────────────────────────────────────────────────────────
 interface ResumeActions {
-  // 初期化・選択
   initNew: (format?: ResumeFormat) => void;
   loadResume: (resume: Resume) => void;
-
-  // 基本情報
   updatePersonalInfo: (patch: Partial<PersonalInfo>) => void;
 
-  // 学歴
-  addEducation: () => void;
+  addEducation: (overrides?: Partial<EducationEntry>) => void;
   updateEducation: (id: string, patch: Partial<EducationEntry>) => void;
   removeEducation: (id: string) => void;
+  initEducationFromBirthDate: (birthDate: string) => void;
 
-  // 職歴
   addWork: () => void;
   updateWork: (id: string, patch: Partial<WorkEntry>) => void;
   removeWork: (id: string) => void;
 
-  // 資格・免許
   addLicense: (category?: LicenseEntry["category"]) => void;
   updateLicense: (id: string, patch: Partial<LicenseEntry>) => void;
   removeLicense: (id: string) => void;
 
-  // テキストフィールド
   setMotivation: (value: string) => void;
   setSelfPR: (value: string) => void;
   setHobbies: (value: string) => void;
 
-  // 保存操作
   saveCurrentToList: () => void;
   setAutoSaveStatus: (status: ResumeState["autoSaveStatus"]) => void;
   deleteSaved: (id: string) => void;
@@ -63,17 +52,14 @@ interface ResumeActions {
 
 type ResumeStore = ResumeState & ResumeActions;
 
-// ─── Store 本体 ───────────────────────────────────────────────────────────────
 export const useResumeStore = create<ResumeStore>()(
   devtools(
     persist(
       immer((set) => ({
-        // ── Initial state ──
         current: null,
         saved: [],
         autoSaveStatus: "idle",
 
-        // ── Actions ──
         initNew: (format = "jis") =>
           set((s) => {
             const resume = createResume(format);
@@ -82,9 +68,7 @@ export const useResumeStore = create<ResumeStore>()(
           }),
 
         loadResume: (resume) =>
-          set((s) => {
-            s.current = resume;
-          }),
+          set((s) => { s.current = resume; }),
 
         updatePersonalInfo: (patch) =>
           set((s) => {
@@ -93,9 +77,9 @@ export const useResumeStore = create<ResumeStore>()(
             s.current.updatedAt = new Date().toISOString();
           }),
 
-        addEducation: () =>
+        addEducation: (overrides) =>
           set((s) => {
-            s.current?.education.push(createEducationEntry());
+            s.current?.education.push(createEducationEntry(overrides));
           }),
 
         updateEducation: (id, patch) =>
@@ -110,10 +94,16 @@ export const useResumeStore = create<ResumeStore>()(
             s.current.education = s.current.education.filter((e) => e.id !== id);
           }),
 
-        addWork: () =>
+        initEducationFromBirthDate: (birthDate) =>
           set((s) => {
-            s.current?.workHistory.push(createWorkEntry());
+            if (!s.current) return;
+            const allEmpty = s.current.education.every((e) => !e.school);
+            if (!allEmpty) return;
+            s.current.education = createEducationFromBirthDate(birthDate);
           }),
+
+        addWork: () =>
+          set((s) => { s.current?.workHistory.push(createWorkEntry()); }),
 
         updateWork: (id, patch) =>
           set((s) => {
@@ -128,9 +118,7 @@ export const useResumeStore = create<ResumeStore>()(
           }),
 
         addLicense: (category = "license") =>
-          set((s) => {
-            s.current?.licenses.push(createLicenseEntry(category));
-          }),
+          set((s) => { s.current?.licenses.push(createLicenseEntry(category)); }),
 
         updateLicense: (id, patch) =>
           set((s) => {
@@ -145,35 +133,24 @@ export const useResumeStore = create<ResumeStore>()(
           }),
 
         setMotivation: (value) =>
-          set((s) => {
-            if (s.current) s.current.motivation = value;
-          }),
+          set((s) => { if (s.current) s.current.motivation = value; }),
 
         setSelfPR: (value) =>
-          set((s) => {
-            if (s.current) s.current.selfPR = value;
-          }),
+          set((s) => { if (s.current) s.current.selfPR = value; }),
 
         setHobbies: (value) =>
-          set((s) => {
-            if (s.current) s.current.hobbies = value;
-          }),
+          set((s) => { if (s.current) s.current.hobbies = value; }),
 
         saveCurrentToList: () =>
           set((s) => {
             if (!s.current) return;
             const idx = s.saved.findIndex((r) => r.id === s.current!.id);
-            if (idx >= 0) {
-              s.saved[idx] = s.current;
-            } else {
-              s.saved.push(s.current);
-            }
+            if (idx >= 0) s.saved[idx] = s.current;
+            else s.saved.push(s.current);
           }),
 
         setAutoSaveStatus: (status) =>
-          set((s) => {
-            s.autoSaveStatus = status;
-          }),
+          set((s) => { s.autoSaveStatus = status; }),
 
         deleteSaved: (id) =>
           set((s) => {
@@ -183,7 +160,6 @@ export const useResumeStore = create<ResumeStore>()(
       })),
       {
         name: "resume-platform-store",
-        // current だけはセッション間で復元し、savedはローカルに保持
         partialize: (state) => ({ current: state.current, saved: state.saved }),
       }
     ),

@@ -8,7 +8,8 @@ export type ResumeFormat =
 
 // ─── 選択肢型 ─────────────────────────────────────────────────────────────────
 export type Gender = "male" | "female" | "other" | "prefer_not_to_say";
-export type EducationStatus = "graduated" | "enrolled" | "dropped_out" | "transferred";
+export type EducationEntryType = "enrolled" | "transferred_in";
+export type EducationExitType = "graduated" | "dropped_out" | "transferred";
 export type WorkStatus = "joined" | "resigned" | "current";
 export type DocumentType = "resume" | "cv" | "cover_letter" | "resignation" | "skill_sheet";
 
@@ -36,12 +37,15 @@ export interface PersonalInfo {
 // ─── 学歴エントリ ─────────────────────────────────────────────────────────────
 export interface EducationEntry {
   id: string;
-  year: number;
-  month: number;
   school: string;
   faculty?: string;
   department?: string;
-  status: EducationStatus;
+  entryYear: number;
+  entryMonth: number;
+  entryType: EducationEntryType;
+  exitYear?: number;
+  exitMonth?: number;
+  exitType?: EducationExitType;
 }
 
 // ─── 職歴エントリ ─────────────────────────────────────────────────────────────

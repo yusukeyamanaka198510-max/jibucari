@@ -62,15 +62,18 @@ export function PersonalInfoSection({ className }: { className?: string }) {
   const field = (key: keyof typeof info) =>
     (value: string) => updatePersonalInfo({ [key]: value });
 
+  // IME入力中の「かな」だけを拾う（漢字変換後は無視）
+  const isKanaOnly = (str: string) => /^[ぁ-ゖァ-ヶーｦ-ﾟ\s]+$/.test(str);
+
   const makeKanaHandlers = (kanaKey: "lastNameKana" | "firstNameKana") => ({
     onCompositionUpdate: (e: React.CompositionEvent<HTMLInputElement>) => {
-      lastKanaRef.current = e.data;
+      if (isKanaOnly(e.data)) lastKanaRef.current = toKatakana(e.data);
     },
     onCompositionEnd: () => {
       if (lastKanaRef.current) {
-        const kana = toKatakana(lastKanaRef.current);
-        // フリガナが未入力の場合のみ自動セット
-        if (!info[kanaKey]) updatePersonalInfo({ [kanaKey]: kana });
+        // フリガナが空の場合のみ自動セット（上書き防止）
+        const cur = info[kanaKey];
+        if (!cur) updatePersonalInfo({ [kanaKey]: lastKanaRef.current });
         lastKanaRef.current = "";
       }
     },
@@ -184,7 +187,7 @@ export function PersonalInfoSection({ className }: { className?: string }) {
             )}
             {lookupError && <span className="text-xs text-red-500">{lookupError}</span>}
           </div>
-          <p className="text-xs text-slate-400 mt-1">7桁入力で都道府県・市区町村を自動入力</p>
+          <p className="text-xs text-slate-400 mt-1">半角数字7桁を入力すると都道府県・市区町村を自動入力</p>
         </FormField>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -201,7 +204,19 @@ export function PersonalInfoSection({ className }: { className?: string }) {
         </FormField>
 
         <FormField id="building" label="建物名・部屋番号">
-          <Input id="building" value={info.building} onChange={(e) => field("building")(e.target.value)} placeholder="〇〇マンション 101号室" />
+          <Input
+            id="building"
+            value={info.building}
+            onChange={(e) => field("building")(e.target.value)}
+            placeholder="〇〇マンション 101号室"
+            onCompositionUpdate={(e) => { if (isKanaOnly(e.data)) lastKanaRef.current = toKatakana(e.data); }}
+            onCompositionEnd={() => {
+              if (lastKanaRef.current) {
+                updatePersonalInfo({ addressKana: (info.addressKana + lastKanaRef.current).trim() });
+                lastKanaRef.current = "";
+              }
+            }}
+          />
         </FormField>
 
         <FormField id="addressKana" label="住所（フリガナ）">

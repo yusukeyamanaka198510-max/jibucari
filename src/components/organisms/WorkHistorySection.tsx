@@ -13,6 +13,20 @@ import {
 import { cn } from "@/lib/utils";
 import type { WorkStatus } from "@/types";
 
+const POSITION_CANDIDATES = [
+  "営業", "内勤営業", "法人営業", "個人営業", "販売・接客", "店長",
+  "事務", "総務", "人事", "経理", "財務", "購買・調達",
+  "マーケティング", "広報・PR", "企画", "商品企画",
+  "Webエンジニア", "システムエンジニア", "プログラマー", "インフラエンジニア",
+  "プロジェクトマネージャー", "スクラムマスター", "データアナリスト",
+  "UIデザイナー", "グラフィックデザイナー", "Webデザイナー",
+  "コンサルタント", "ITコンサルタント",
+  "研究開発", "品質管理・QC", "製造・生産管理", "物流・倉庫管理", "ドライバー",
+  "医師", "看護師", "薬剤師", "介護士", "保育士", "教師・講師",
+  "料理人・シェフ", "美容師", "理容師",
+  "主任", "係長", "課長", "部長", "マネージャー", "チームリーダー", "役員",
+];
+
 const STATUS_OPTIONS: { value: WorkStatus; label: string }[] = [
   { value: "joined", label: "入社" },
   { value: "resigned", label: "退職" },
@@ -91,10 +105,16 @@ export function WorkHistorySection({ className }: { className?: string }) {
                   <FormField id={`work-position-${entry.id}`} label="役職・職種">
                     <Input
                       id={`work-position-${entry.id}`}
+                      list={`work-position-list-${entry.id}`}
                       value={entry.position ?? ""}
                       onChange={(e) => updateWork(entry.id, { position: e.target.value })}
                       placeholder="Webエンジニア"
                     />
+                    <datalist id={`work-position-list-${entry.id}`}>
+                      {POSITION_CANDIDATES.map((p) => (
+                        <option key={p} value={p} />
+                      ))}
+                    </datalist>
                   </FormField>
                   <FormField id={`work-dept-${entry.id}`} label="部署">
                     <Input

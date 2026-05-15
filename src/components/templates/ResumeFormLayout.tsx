@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useResumeStore } from "@/store/resumeStore";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { usePdfDownload } from "@/hooks/usePdfDownload";
@@ -13,7 +13,7 @@ import { AutoSaveIndicator } from "@/components/molecules/AutoSaveIndicator";
 import { PdfPreviewModal } from "@/components/pdf/PdfPreviewModal";
 import { Button } from "@/components/atoms/Button";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Download, Eye, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Eye, Check, Camera, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ResumeFormat } from "@/types";
 
@@ -234,10 +234,84 @@ function ReviewStep({
   onDownload: () => void;
   isGenerating: boolean;
 }) {
+  const photoUrl = useResumeStore((s) => s.current?.personalInfo.photoUrl ?? "");
+  const updatePersonalInfo = useResumeStore((s) => s.updatePersonalInfo);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      updatePersonalInfo({ photoUrl: dataUrl });
+    };
+    reader.readAsDataURL(file);
+  };
+
   return (
-    <div className="space-y-6 text-center py-4">
-      <div className="text-6xl">🎉</div>
-      <div className="space-y-2">
+    <div className="space-y-6 py-4">
+      {/* 写真アップロード */}
+      <div className="rounded-xl border border-slate-200 p-5 space-y-3 bg-slate-50/50">
+        <p className="text-sm font-semibold text-slate-700">証明写真</p>
+        <div className="flex items-start gap-5">
+          {/* 写真プレビュー */}
+          <div
+            className="relative w-24 h-32 flex-shrink-0 rounded-lg border-2 border-dashed border-slate-300 bg-white flex items-center justify-center overflow-hidden cursor-pointer hover:border-indigo-400 transition-colors"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {photoUrl ? (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={photoUrl} alt="証明写真" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-black/30 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <Camera className="h-5 w-5 text-white" />
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center gap-1.5 text-slate-400">
+                <Camera className="h-7 w-7" />
+                <span className="text-[10px] font-medium text-center leading-tight">タップして<br />追加</span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1 space-y-2">
+            <p className="text-xs text-slate-500 leading-relaxed">
+              縦4cm×横3cm程度の証明写真を推奨します。<br />
+              JPEG・PNG形式に対応しています。
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="text-xs font-medium px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
+              >
+                {photoUrl ? "写真を変更" : "写真を選択"}
+              </button>
+              {photoUrl && (
+                <button
+                  onClick={() => updatePersonalInfo({ photoUrl: "" })}
+                  className="text-xs font-medium px-3 py-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors flex items-center gap-1"
+                >
+                  <Trash2 className="h-3 w-3" />
+                  削除
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handlePhotoChange}
+        />
+      </div>
+
+      {/* 完了メッセージ */}
+      <div className="text-center space-y-2">
+        <div className="text-5xl">🎉</div>
         <h3 className="text-xl font-black text-slate-900">入力完了！</h3>
         <p className="text-slate-500 text-sm">
           内容を確認して、PDFをダウンロードしましょう。
@@ -253,7 +327,7 @@ function ReviewStep({
           PDFをダウンロード
         </Button>
       </div>
-      <p className="text-xs text-slate-400">
+      <p className="text-xs text-slate-400 text-center">
         ダウンロード後も編集・再ダウンロードできます
       </p>
     </div>

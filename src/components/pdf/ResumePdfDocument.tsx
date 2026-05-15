@@ -3,6 +3,7 @@ import {
   Page,
   Text,
   View,
+  Image,
   StyleSheet,
   Font,
 } from "@react-pdf/renderer";
@@ -85,8 +86,9 @@ const styles = StyleSheet.create({
 });
 
 const STATUS_JA: Record<string, string> = {
+  enrolled: "入学",
+  transferred_in: "転入",
   graduated: "卒業",
-  enrolled: "在学中",
   dropped_out: "中退",
   transferred: "転学",
   joined: "入社",
@@ -171,9 +173,14 @@ export function ResumePdfDocument({ resume }: Props) {
                 border: "0.5 solid #aaa",
                 alignItems: "center",
                 justifyContent: "center",
+                overflow: "hidden",
               }}
             >
-              <Text style={{ fontSize: 7, color: "#aaa" }}>写真貼付欄</Text>
+              {pi.photoUrl ? (
+                <Image src={pi.photoUrl} style={{ width: 80, height: 100, objectFit: "cover" }} />
+              ) : (
+                <Text style={{ fontSize: 7, color: "#aaa" }}>写真貼付欄</Text>
+              )}
             </View>
           </View>
         </View>
@@ -182,16 +189,27 @@ export function ResumePdfDocument({ resume }: Props) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>学歴</Text>
           {education.map((e) => (
-            <View key={e.id} style={styles.tableRow}>
-              <Text style={styles.tableColDate}>
-                {formatYearMonth(e.year, e.month)}
-              </Text>
-              <Text style={styles.tableColContent}>
-                {e.school}
-                {e.faculty ? `　${e.faculty}` : ""}
-                {e.department ? `　${e.department}` : ""}
-              </Text>
-              <Text style={styles.tableColStatus}>{STATUS_JA[e.status] ?? ""}</Text>
+            <View key={e.id}>
+              <View style={styles.tableRow}>
+                <Text style={styles.tableColDate}>
+                  {formatYearMonth(e.entryYear, e.entryMonth)}
+                </Text>
+                <Text style={styles.tableColContent}>
+                  {e.school}
+                  {e.faculty ? `　${e.faculty}` : ""}
+                  {e.department ? `　${e.department}` : ""}
+                </Text>
+                <Text style={styles.tableColStatus}>{STATUS_JA[e.entryType] ?? ""}</Text>
+              </View>
+              {e.exitYear != null && (
+                <View style={styles.tableRow}>
+                  <Text style={styles.tableColDate}>
+                    {formatYearMonth(e.exitYear, e.exitMonth ?? 3)}
+                  </Text>
+                  <Text style={styles.tableColContent}>{e.school}</Text>
+                  <Text style={styles.tableColStatus}>{STATUS_JA[e.exitType ?? "graduated"] ?? ""}</Text>
+                </View>
+              )}
             </View>
           ))}
         </View>

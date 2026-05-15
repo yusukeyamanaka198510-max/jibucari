@@ -8,12 +8,6 @@ import type {
   LicenseEntry,
 } from "@/types";
 
-// ─── ファクトリ関数 ───────────────────────────────────────────────────────────
-
-/**
- * 新規履歴書エンティティを生成する。
- * IDと作成日時はここで付与することでドメイン外部に依存しない設計を維持する。
- */
 export function createResume(
   format: ResumeFormat = "jis",
   title = "新しい履歴書"
@@ -54,16 +48,46 @@ export function createEmptyPersonalInfo(): PersonalInfo {
   };
 }
 
-export function createEducationEntry(): EducationEntry {
+export function createEducationEntry(overrides?: Partial<EducationEntry>): EducationEntry {
   return {
     id: uuidv4(),
-    year: new Date().getFullYear(),
-    month: 4,
     school: "",
     faculty: "",
     department: "",
-    status: "graduated",
+    entryYear: new Date().getFullYear(),
+    entryMonth: 4,
+    entryType: "enrolled",
+    exitYear: undefined,
+    exitMonth: undefined,
+    exitType: undefined,
+    ...overrides,
   };
+}
+
+/** 生年月日から小学校入学年度を返す（早生まれ考慮） */
+export function getSchoolEntranceYear(birthDate: string): number {
+  if (!birthDate) return new Date().getFullYear();
+  const birth = new Date(birthDate);
+  const y = birth.getFullYear();
+  const isAfterApril2 = birth.getMonth() > 3 || (birth.getMonth() === 3 && birth.getDate() >= 2);
+  const base = isAfterApril2 ? y + 1 : y;
+  return base + 6;
+}
+
+/** 生年月日から小・中・高の学歴を自動生成 */
+export function createEducationFromBirthDate(birthDate: string): EducationEntry[] {
+  if (!birthDate) return [createEducationEntry()];
+  const birth = new Date(birthDate);
+  const y = birth.getFullYear();
+  // 4月2日以降生まれは翌年入学（早生まれ考慮）
+  const base = (birth.getMonth() > 3 || (birth.getMonth() === 3 && birth.getDate() >= 2))
+    ? y + 1
+    : y;
+  return [
+    createEducationEntry({ school: "○○小学校", entryYear: base + 6,  entryMonth: 4, entryType: "enrolled", exitYear: base + 12, exitMonth: 3, exitType: "graduated" }),
+    createEducationEntry({ school: "○○中学校", entryYear: base + 12, entryMonth: 4, entryType: "enrolled", exitYear: base + 15, exitMonth: 3, exitType: "graduated" }),
+    createEducationEntry({ school: "○○高等学校", entryYear: base + 15, entryMonth: 4, entryType: "enrolled", exitYear: base + 18, exitMonth: 3, exitType: "graduated" }),
+  ];
 }
 
 export function createWorkEntry(): WorkEntry {
@@ -89,52 +113,24 @@ export function createLicenseEntry(category: LicenseEntry["category"] = "license
   };
 }
 
-// ─── ドメインロジック ─────────────────────────────────────────────────────────
-
-/**
- * 生年月日から年齢を計算する。
- * @param birthDate - ISO 8601形式 (YYYY-MM-DD)
- * @param referenceDate - 基準日（省略時は今日）
- */
 export function calculateAge(birthDate: string, referenceDate?: Date): number {
   if (!birthDate) return 0;
   const ref = referenceDate ?? new Date();
   const birth = new Date(birthDate);
   let age = ref.getFullYear() - birth.getFullYear();
-  const hasHadBirthdayThisYear =
+  const hasHadBirthday =
     ref.getMonth() > birth.getMonth() ||
     (ref.getMonth() === birth.getMonth() && ref.getDate() >= birth.getDate());
-  if (!hasHadBirthdayThisYear) age -= 1;
+  if (!hasHadBirthday) age -= 1;
   return age;
 }
 
-/**
- * 生年月日と対象年度から、当時の学年入学年を和暦で返す。
- * 4月2日以降生まれが学年の始まりとなる日本の慣習に対応。
- */
-export function getSchoolEntranceYear(birthDate: string): number {
-  if (!birthDate) return 0;
-  const birth = new Date(birthDate);
-  // 4月2日より前生まれは当年4月入学、以降は翌年4月入学
-  const adjustedYear =
-    birth.getMonth() < 3 || (birth.getMonth() === 3 && birth.getDate() <= 1)
-      ? birth.getFullYear()
-      : birth.getFullYear() + 1;
-  return adjustedYear + 6; // 小学校入学年
-}
-
-/**
- * 学歴を年月昇順にソートする。
- */
 export function sortEducationEntries(entries: EducationEntry[]): EducationEntry[] {
   return [...entries].sort((a, b) =>
-    a.year !== b.year ? a.year - b.year : a.month - b.month
+    a.entryYear !== b.entryYear ? a.entryYear - b.entryYear : a.entryMonth - b.entryMonth
   );
 }
 
-/**
- * 職歴を年月昇順にソートする。
- */
 export function sortWorkEntries(entries: WorkEntry[]): WorkEntry[] {
   return [...entries].sort((a, b) =>
     a.year !== b.year ? a.year - b.year : a.month - b.month

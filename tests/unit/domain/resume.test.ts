@@ -61,14 +61,14 @@ describe("getSchoolEntranceYear", () => {
 describe("sortEducationEntries", () => {
   it("年月昇順にソートされる", () => {
     const entries = [
-      { ...createEducationEntry(), year: 2020, month: 4 },
-      { ...createEducationEntry(), year: 2015, month: 9 },
-      { ...createEducationEntry(), year: 2020, month: 1 },
+      { ...createEducationEntry(), entryYear: 2020, entryMonth: 4 },
+      { ...createEducationEntry(), entryYear: 2015, entryMonth: 9 },
+      { ...createEducationEntry(), entryYear: 2020, entryMonth: 1 },
     ];
     const sorted = sortEducationEntries(entries);
-    expect(sorted[0]!.year).toBe(2015);
-    expect(sorted[1]!.month).toBe(1);
-    expect(sorted[2]!.month).toBe(4);
+    expect(sorted[0]!.entryYear).toBe(2015);
+    expect(sorted[1]!.entryMonth).toBe(1);
+    expect(sorted[2]!.entryMonth).toBe(4);
   });
 
   it("元の配列を変更しない（immutable）", () => {
