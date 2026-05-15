@@ -165,7 +165,7 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
                 Step {step} / {STEPS.length}
               </p>
               <h2 className="text-xl font-black text-slate-900">
-                {STEPS[step - 1].label}
+                {STEPS[step - 1]?.label}
               </h2>
             </div>
 
