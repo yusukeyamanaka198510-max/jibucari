@@ -23,8 +23,9 @@ export function usePdfDownload(resume: Resume | null): UsePdfDownloadReturn {
     setError(null);
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const element = createElement(ResumePdfDocument, { resume }) as ReactElement<any>;
-      const blob = await pdf(element).toBlob();
+      const element = createElement(ResumePdfDocument, { resume }) as any;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const blob = await (pdf as any)(element).toBlob();
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = url;

@@ -30,7 +30,8 @@ export function PdfPreviewModal({ resume, isOpen, onClose }: PdfPreviewModalProp
   const handleDownload = async () => {
     setIsDownloading(true);
     try {
-      const blob = await pdf(<ResumePdfDocument resume={resume} />).toBlob();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const blob = await (pdf as any)(<ResumePdfDocument resume={resume} />).toBlob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
