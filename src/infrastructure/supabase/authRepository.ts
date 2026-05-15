@@ -17,7 +17,11 @@ export interface AuthRepository {
  * Supabase Email/Password 認証リポジトリ実装。
  */
 export class SupabaseAuthRepository implements AuthRepository {
-  private supabase = createSupabaseBrowserClient();
+  private get supabase() {
+    const client = createSupabaseBrowserClient();
+    if (!client) throw new Error("Supabase が設定されていません");
+    return client;
+  }
 
   async signUp({ email, password }: AuthCredentials): Promise<User> {
     const { data, error } = await this.supabase.auth.signUp({ email, password });

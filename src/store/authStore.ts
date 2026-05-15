@@ -19,7 +19,11 @@ interface AuthActions {
 
 type AuthStore = AuthState & AuthActions;
 
-const authRepo = new SupabaseAuthRepository();
+let authRepo: SupabaseAuthRepository | null = null;
+function getAuthRepo() {
+  if (!authRepo) authRepo = new SupabaseAuthRepository();
+  return authRepo;
+}
 
 export const useAuthStore = create<AuthStore>()(
   devtools(
@@ -34,7 +38,7 @@ export const useAuthStore = create<AuthStore>()(
       signUp: async (email, password) => {
         set({ isLoading: true, error: null });
         try {
-          const user = await authRepo.signUp({ email, password });
+          const user = await getAuthRepo().signUp({ email, password });
           set({ user, isLoading: false });
         } catch (e) {
           set({ error: (e as Error).message, isLoading: false });
@@ -45,7 +49,7 @@ export const useAuthStore = create<AuthStore>()(
       signIn: async (email, password) => {
         set({ isLoading: true, error: null });
         try {
-          const user = await authRepo.signIn({ email, password });
+          const user = await getAuthRepo().signIn({ email, password });
           set({ user, isLoading: false });
         } catch (e) {
           set({ error: (e as Error).message, isLoading: false });
@@ -56,7 +60,7 @@ export const useAuthStore = create<AuthStore>()(
       signOut: async () => {
         set({ isLoading: true, error: null });
         try {
-          await authRepo.signOut();
+          await getAuthRepo().signOut();
           set({ user: null, isLoading: false });
         } catch (e) {
           set({ error: (e as Error).message, isLoading: false });

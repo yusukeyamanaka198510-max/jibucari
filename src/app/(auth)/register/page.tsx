@@ -4,6 +4,8 @@ import { AuthForm } from "@/components/organisms/AuthForm";
 
 export const metadata: Metadata = { title: "新規登録 | ジブキャリ" };
 
+export const dynamic = "force-dynamic";
+
 export default function RegisterPage() {
   return (
     <Suspense>

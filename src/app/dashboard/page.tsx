@@ -5,14 +5,14 @@ import { createSupabaseServerClient } from "@/infrastructure/supabase/serverClie
 import { SupabaseResumeRepository } from "@/infrastructure/repositories/supabaseResumeRepository";
 import { DashboardClient } from "./DashboardClient";
 
-export const metadata: Metadata = { title: "ダッシュボード | ヤギ履歴書" };
+export const metadata: Metadata = { title: "ダッシュボード | ジブキャリ" };
 
-/**
- * Server Component: 認証確認 + 初期データ取得を担う。
- * UIは DashboardClient に委譲することで、インタラクティブな操作をクライアントで行う。
- */
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   const supabase = createSupabaseServerClient();
+  if (!supabase) redirect("/login");
+
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
