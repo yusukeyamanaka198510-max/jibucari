@@ -79,13 +79,13 @@ export function createWorkEntry(): WorkEntry {
   };
 }
 
-export function createLicenseEntry(): LicenseEntry {
+export function createLicenseEntry(category: LicenseEntry["category"] = "license"): LicenseEntry {
   return {
     id: uuidv4(),
     year: new Date().getFullYear(),
     month: 1,
     name: "",
-    organization: "",
+    category,
   };
 }
 

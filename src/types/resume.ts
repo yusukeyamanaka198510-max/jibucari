@@ -62,7 +62,7 @@ export interface LicenseEntry {
   year: number;
   month: number;
   name: string;
-  organization?: string;
+  category: "license" | "qualification";
 }
 
 // ─── 履歴書集約ルート ─────────────────────────────────────────────────────────

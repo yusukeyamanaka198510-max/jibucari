@@ -7,11 +7,7 @@ import { YearMonthSelector } from "@/components/molecules/YearMonthSelector";
 import { Input } from "@/components/atoms/Input";
 import { Button } from "@/components/atoms/Button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/atoms/Select";
 import { cn } from "@/lib/utils";
 import type { EducationStatus } from "@/types";
@@ -23,10 +19,6 @@ const STATUS_OPTIONS: { value: EducationStatus; label: string }[] = [
   { value: "transferred", label: "転学" },
 ];
 
-/**
- * 学歴入力セクション Organism。
- * エントリの追加・削除・編集を管理する。
- */
 export function EducationSection({ className }: { className?: string }) {
   const education = useResumeStore((s) => s.current?.education ?? []);
   const addEducation = useResumeStore((s) => s.addEducation);
@@ -34,50 +26,23 @@ export function EducationSection({ className }: { className?: string }) {
   const removeEducation = useResumeStore((s) => s.removeEducation);
 
   return (
-    <section
-      className={cn("space-y-4", className)}
-      aria-labelledby="education-heading"
-    >
-      <div className="flex items-center justify-between border-b pb-2">
-        <h2 id="education-heading" className="text-lg font-semibold">
-          学歴
-        </h2>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={addEducation}
-          aria-label="学歴を追加"
-        >
-          <PlusCircle className="h-4 w-4" />
-          追加
-        </Button>
-      </div>
-
-      {education.length === 0 && (
-        <p className="text-sm text-muted-foreground text-center py-6">
-          「追加」ボタンで学歴を入力してください
-        </p>
-      )}
+    <section className={cn("space-y-4", className)} aria-labelledby="education-heading">
+      <h2 id="education-heading" className="text-lg font-semibold border-b pb-2">学歴</h2>
 
       <ol className="space-y-4">
         {education.map((entry, index) => (
-          <li
-            key={entry.id}
-            className="rounded-lg border p-4 space-y-3 relative"
-          >
+          <li key={entry.id} className="rounded-xl border border-slate-200 p-4 space-y-3 bg-slate-50/50">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-muted-foreground">
-                学歴 {index + 1}
-              </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => removeEducation(entry.id)}
-                aria-label={`学歴 ${index + 1} を削除`}
-                className="text-muted-foreground hover:text-destructive"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <span className="text-xs font-semibold text-indigo-600 uppercase tracking-wide">学歴 {index + 1}</span>
+              {education.length > 1 && (
+                <button
+                  onClick={() => removeEducation(entry.id)}
+                  className="text-slate-400 hover:text-red-500 transition-colors"
+                  aria-label={`学歴 ${index + 1} を削除`}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -85,24 +50,18 @@ export function EducationSection({ className }: { className?: string }) {
                 <Input
                   id={`edu-school-${entry.id}`}
                   value={entry.school}
-                  onChange={(e) =>
-                    updateEducation(entry.id, { school: e.target.value })
-                  }
+                  onChange={(e) => updateEducation(entry.id, { school: e.target.value })}
                   placeholder="〇〇大学"
                 />
               </FormField>
-
               <FormField id={`edu-faculty-${entry.id}`} label="学部・学科">
                 <Input
                   id={`edu-faculty-${entry.id}`}
                   value={entry.faculty ?? ""}
-                  onChange={(e) =>
-                    updateEducation(entry.id, { faculty: e.target.value })
-                  }
+                  onChange={(e) => updateEducation(entry.id, { faculty: e.target.value })}
                   placeholder="経済学部 経済学科"
                 />
               </FormField>
-
               <FormField id={`edu-year-${entry.id}`} label="年月" required>
                 <YearMonthSelector
                   year={entry.year}
@@ -111,22 +70,15 @@ export function EducationSection({ className }: { className?: string }) {
                   onMonthChange={(m) => updateEducation(entry.id, { month: m })}
                 />
               </FormField>
-
               <FormField id={`edu-status-${entry.id}`} label="状態" required>
                 <Select
                   value={entry.status}
-                  onValueChange={(v) =>
-                    updateEducation(entry.id, { status: v as EducationStatus })
-                  }
+                  onValueChange={(v) => updateEducation(entry.id, { status: v as EducationStatus })}
                 >
-                  <SelectTrigger id={`edu-status-${entry.id}`}>
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger id={`edu-status-${entry.id}`}><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {STATUS_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -135,6 +87,15 @@ export function EducationSection({ className }: { className?: string }) {
           </li>
         ))}
       </ol>
+
+      {/* 追加ボタン */}
+      <button
+        onClick={addEducation}
+        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-slate-200 text-slate-400 hover:border-indigo-300 hover:text-indigo-500 transition-colors text-sm font-medium"
+      >
+        <PlusCircle className="h-4 w-4" />
+        学歴を追加
+      </button>
     </section>
   );
 }

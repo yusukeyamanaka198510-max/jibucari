@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useResumeStore } from "@/store/resumeStore";
 import { useAgeCalculator } from "@/hooks/useAgeCalculator";
 import { FormField } from "@/components/molecules/FormField";
 import { Input } from "@/components/atoms/Input";
+import { BirthDatePicker } from "@/components/molecules/BirthDatePicker";
 import {
   Select,
   SelectContent,
@@ -15,7 +16,6 @@ import {
 import { cn } from "@/lib/utils";
 import { formatPostalCode, normalizePhone } from "@/lib/utils";
 import { Loader2, MapPin } from "lucide-react";
-import { BirthDatePicker } from "@/components/molecules/BirthDatePicker";
 import type { Gender } from "@/types";
 
 const GENDER_OPTIONS: { value: Gender; label: string }[] = [
@@ -24,6 +24,10 @@ const GENDER_OPTIONS: { value: Gender; label: string }[] = [
   { value: "other", label: "その他" },
   { value: "prefer_not_to_say", label: "回答しない" },
 ];
+
+// ひらがな → カタカナ変換
+const toKatakana = (str: string) =>
+  str.replace(/[ぁ-ゖ]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0x60));
 
 async function lookupPostalCode(digits: string): Promise<{ prefecture: string; city: string; kana: string } | null> {
   try {
@@ -50,28 +54,40 @@ export function PersonalInfoSection({ className }: { className?: string }) {
   const [lookupDone, setLookupDone] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
 
+  // IME composition でフリガナを自動取得
+  const lastKanaRef = useRef("");
+
   if (!info) return null;
 
   const field = (key: keyof typeof info) =>
     (value: string) => updatePersonalInfo({ [key]: value });
+
+  const makeKanaHandlers = (kanaKey: "lastNameKana" | "firstNameKana") => ({
+    onCompositionUpdate: (e: React.CompositionEvent<HTMLInputElement>) => {
+      lastKanaRef.current = e.data;
+    },
+    onCompositionEnd: () => {
+      if (lastKanaRef.current) {
+        const kana = toKatakana(lastKanaRef.current);
+        // フリガナが未入力の場合のみ自動セット
+        if (!info[kanaKey]) updatePersonalInfo({ [kanaKey]: kana });
+        lastKanaRef.current = "";
+      }
+    },
+  });
 
   const handlePostalCode = async (raw: string) => {
     const formatted = formatPostalCode(raw);
     updatePersonalInfo({ postalCode: formatted });
     setLookupError(null);
     setLookupDone(false);
-
     const digits = raw.replace(/-/g, "");
     if (digits.length === 7) {
       setIsLooking(true);
       const result = await lookupPostalCode(digits);
       setIsLooking(false);
       if (result) {
-        updatePersonalInfo({
-          prefecture: result.prefecture,
-          city: result.city,
-          addressKana: result.kana,
-        });
+        updatePersonalInfo({ prefecture: result.prefecture, city: result.city, addressKana: result.kana });
         setLookupDone(true);
       } else {
         setLookupError("住所が見つかりませんでした");
@@ -81,9 +97,7 @@ export function PersonalInfoSection({ className }: { className?: string }) {
 
   return (
     <section className={cn("space-y-6", className)} aria-labelledby="personal-info-heading">
-      <h2 id="personal-info-heading" className="text-lg font-semibold border-b pb-2">
-        基本情報
-      </h2>
+      <h2 id="personal-info-heading" className="text-lg font-semibold border-b pb-2">基本情報</h2>
 
       {/* 氏名 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -94,6 +108,7 @@ export function PersonalInfoSection({ className }: { className?: string }) {
             onChange={(e) => field("lastName")(e.target.value)}
             placeholder="山田"
             autoComplete="family-name"
+            {...makeKanaHandlers("lastNameKana")}
           />
         </FormField>
         <FormField id="firstName" label="名" required>
@@ -103,9 +118,10 @@ export function PersonalInfoSection({ className }: { className?: string }) {
             onChange={(e) => field("firstName")(e.target.value)}
             placeholder="太郎"
             autoComplete="given-name"
+            {...makeKanaHandlers("firstNameKana")}
           />
         </FormField>
-        <FormField id="lastNameKana" label="姓（フリガナ）" required>
+        <FormField id="lastNameKana" label="姓（フリガナ）" required hint="漢字入力で自動入力されます">
           <Input
             id="lastNameKana"
             value={info.lastNameKana}
@@ -113,7 +129,7 @@ export function PersonalInfoSection({ className }: { className?: string }) {
             placeholder="ヤマダ"
           />
         </FormField>
-        <FormField id="firstNameKana" label="名（フリガナ）" required>
+        <FormField id="firstNameKana" label="名（フリガナ）" required hint="漢字入力で自動入力されます">
           <Input
             id="firstNameKana"
             value={info.firstNameKana}
@@ -125,31 +141,18 @@ export function PersonalInfoSection({ className }: { className?: string }) {
 
       {/* 生年月日・性別 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <FormField
-          id="birthDate"
-          label="生年月日"
-          required
-          hint={info.birthDate ? `満 ${age} 歳` : undefined}
-        >
+        <FormField id="birthDate" label="生年月日" required hint={info.birthDate ? `満 ${age} 歳` : undefined}>
           <BirthDatePicker
             value={info.birthDate}
             onChange={(v) => updatePersonalInfo({ birthDate: v })}
           />
         </FormField>
-
         <FormField id="gender" label="性別">
-          <Select
-            value={info.gender}
-            onValueChange={(v) => updatePersonalInfo({ gender: v as Gender })}
-          >
-            <SelectTrigger id="gender">
-              <SelectValue placeholder="選択してください" />
-            </SelectTrigger>
+          <Select value={info.gender} onValueChange={(v) => updatePersonalInfo({ gender: v as Gender })}>
+            <SelectTrigger id="gender"><SelectValue placeholder="選択してください" /></SelectTrigger>
             <SelectContent>
               {GENDER_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -158,7 +161,6 @@ export function PersonalInfoSection({ className }: { className?: string }) {
 
       {/* 住所 */}
       <div className="space-y-4">
-        {/* 郵便番号 */}
         <FormField id="postalCode" label="郵便番号" required>
           <div className="flex items-center gap-3 flex-wrap">
             <Input
@@ -172,71 +174,38 @@ export function PersonalInfoSection({ className }: { className?: string }) {
             />
             {isLooking && (
               <span className="flex items-center gap-1.5 text-xs text-indigo-500 font-medium">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                住所を検索中...
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />住所を検索中...
               </span>
             )}
             {lookupDone && !isLooking && (
               <span className="flex items-center gap-1.5 text-xs text-emerald-600 font-medium">
-                <MapPin className="h-3.5 w-3.5" />
-                住所を自動入力しました
+                <MapPin className="h-3.5 w-3.5" />住所を自動入力しました
               </span>
             )}
-            {lookupError && (
-              <span className="text-xs text-red-500">{lookupError}</span>
-            )}
+            {lookupError && <span className="text-xs text-red-500">{lookupError}</span>}
           </div>
           <p className="text-xs text-slate-400 mt-1">7桁入力で都道府県・市区町村を自動入力</p>
         </FormField>
 
-        {/* 都道府県 + 市区町村 */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField id="prefecture" label="都道府県" required>
-            <Input
-              id="prefecture"
-              value={info.prefecture}
-              onChange={(e) => field("prefecture")(e.target.value)}
-              placeholder="東京都"
-            />
+            <Input id="prefecture" value={info.prefecture} onChange={(e) => field("prefecture")(e.target.value)} placeholder="東京都" />
           </FormField>
           <FormField id="city" label="市区町村" required>
-            <Input
-              id="city"
-              value={info.city}
-              onChange={(e) => field("city")(e.target.value)}
-              placeholder="渋谷区〇〇"
-            />
+            <Input id="city" value={info.city} onChange={(e) => field("city")(e.target.value)} placeholder="渋谷区〇〇" />
           </FormField>
         </div>
 
-        {/* 番地 */}
         <FormField id="streetAddress" label="番地" required>
-          <Input
-            id="streetAddress"
-            value={info.streetAddress}
-            onChange={(e) => field("streetAddress")(e.target.value)}
-            placeholder="1-2-3"
-          />
+          <Input id="streetAddress" value={info.streetAddress} onChange={(e) => field("streetAddress")(e.target.value)} placeholder="1-2-3" />
         </FormField>
 
-        {/* 建物名・部屋番号 */}
         <FormField id="building" label="建物名・部屋番号">
-          <Input
-            id="building"
-            value={info.building}
-            onChange={(e) => field("building")(e.target.value)}
-            placeholder="〇〇マンション 101号室"
-          />
+          <Input id="building" value={info.building} onChange={(e) => field("building")(e.target.value)} placeholder="〇〇マンション 101号室" />
         </FormField>
 
-        {/* 住所フリガナ */}
         <FormField id="addressKana" label="住所（フリガナ）">
-          <Input
-            id="addressKana"
-            value={info.addressKana}
-            onChange={(e) => field("addressKana")(e.target.value)}
-            placeholder="トウキョウトシブヤク〇〇"
-          />
+          <Input id="addressKana" value={info.addressKana} onChange={(e) => field("addressKana")(e.target.value)} placeholder="トウキョウトシブヤク〇〇" />
         </FormField>
       </div>
 
@@ -247,14 +216,11 @@ export function PersonalInfoSection({ className }: { className?: string }) {
             id="mobilePhone"
             type="tel"
             value={info.mobilePhone}
-            onChange={(e) =>
-              updatePersonalInfo({ mobilePhone: normalizePhone(e.target.value) })
-            }
+            onChange={(e) => updatePersonalInfo({ mobilePhone: normalizePhone(e.target.value) })}
             placeholder="090-1234-5678"
             autoComplete="tel"
           />
         </FormField>
-
         <FormField id="email" label="メールアドレス" required>
           <Input
             id="email"

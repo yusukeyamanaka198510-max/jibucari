@@ -46,7 +46,7 @@ interface ResumeActions {
   removeWork: (id: string) => void;
 
   // 資格・免許
-  addLicense: () => void;
+  addLicense: (category?: LicenseEntry["category"]) => void;
   updateLicense: (id: string, patch: Partial<LicenseEntry>) => void;
   removeLicense: (id: string) => void;
 
@@ -76,7 +76,9 @@ export const useResumeStore = create<ResumeStore>()(
         // ── Actions ──
         initNew: (format = "jis") =>
           set((s) => {
-            s.current = createResume(format);
+            const resume = createResume(format);
+            resume.education.push(createEducationEntry());
+            s.current = resume;
           }),
 
         loadResume: (resume) =>
@@ -125,9 +127,9 @@ export const useResumeStore = create<ResumeStore>()(
             s.current.workHistory = s.current.workHistory.filter((e) => e.id !== id);
           }),
 
-        addLicense: () =>
+        addLicense: (category = "license") =>
           set((s) => {
-            s.current?.licenses.push(createLicenseEntry());
+            s.current?.licenses.push(createLicenseEntry(category));
           }),
 
         updateLicense: (id, patch) =>
