@@ -1,0 +1,90 @@
+// ─── 履歴書フォーマット ───────────────────────────────────────────────────────
+export type ResumeFormat =
+  | "jis"           // JIS規格（一般用）
+  | "career_change" // 転職用
+  | "new_graduate"  // 新卒用
+  | "part_time";    // アルバイト用
+
+// ─── 選択肢型 ─────────────────────────────────────────────────────────────────
+export type Gender = "male" | "female" | "other" | "prefer_not_to_say";
+export type EducationStatus = "graduated" | "enrolled" | "dropped_out" | "transferred";
+export type WorkStatus = "joined" | "resigned" | "current";
+export type DocumentType = "resume" | "cv" | "cover_letter" | "resignation" | "skill_sheet";
+
+// ─── 基本情報 ─────────────────────────────────────────────────────────────────
+export interface PersonalInfo {
+  lastName: string;
+  firstName: string;
+  lastNameKana: string;
+  firstNameKana: string;
+  /** ISO 8601: YYYY-MM-DD */
+  birthDate: string;
+  gender: Gender;
+  postalCode: string;
+  address: string;
+  addressKana: string;
+  phone: string;
+  mobilePhone: string;
+  email: string;
+  /** Supabase Storage URL or base64 data URL */
+  photoUrl?: string;
+}
+
+// ─── 学歴エントリ ─────────────────────────────────────────────────────────────
+export interface EducationEntry {
+  id: string;
+  year: number;
+  month: number;
+  school: string;
+  faculty?: string;
+  department?: string;
+  status: EducationStatus;
+}
+
+// ─── 職歴エントリ ─────────────────────────────────────────────────────────────
+export interface WorkEntry {
+  id: string;
+  year: number;
+  month: number;
+  company: string;
+  department?: string;
+  position?: string;
+  description?: string;
+  status: WorkStatus;
+}
+
+// ─── 資格・免許エントリ ───────────────────────────────────────────────────────
+export interface LicenseEntry {
+  id: string;
+  year: number;
+  month: number;
+  name: string;
+  organization?: string;
+}
+
+// ─── 履歴書集約ルート ─────────────────────────────────────────────────────────
+export interface Resume {
+  id: string;
+  userId?: string;
+  format: ResumeFormat;
+  title: string;
+  personalInfo: PersonalInfo;
+  education: EducationEntry[];
+  workHistory: WorkEntry[];
+  licenses: LicenseEntry[];
+  motivation: string;
+  selfPR: string;
+  hobbies: string;
+  commute?: string;
+  dependents?: number;
+  spouseDependent?: boolean;
+  desiredSalary?: string;
+  /** ISO 8601 */
+  createdAt: string;
+  /** ISO 8601 */
+  updatedAt: string;
+}
+
+// ─── 部分更新用ユーティリティ型 ───────────────────────────────────────────────
+export type ResumeUpdate = Partial<Omit<Resume, "id" | "createdAt" | "updatedAt">>;
+export type PersonalInfoUpdate = Partial<PersonalInfo>;
