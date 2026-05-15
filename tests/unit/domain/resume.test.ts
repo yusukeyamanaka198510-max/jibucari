@@ -82,10 +82,10 @@ describe("sortEducationEntries", () => {
 describe("sortWorkEntries", () => {
   it("年月昇順にソートされる", () => {
     const entries = [
-      { ...createWorkEntry(), year: 2023, month: 3 },
-      { ...createWorkEntry(), year: 2018, month: 4 },
+      { ...createWorkEntry(), entryYear: 2023, entryMonth: 3 },
+      { ...createWorkEntry(), entryYear: 2018, entryMonth: 4 },
     ];
     const sorted = sortWorkEntries(entries);
-    expect(sorted[0]!.year).toBe(2018);
+    expect(sorted[0]!.entryYear).toBe(2018);
   });
 });

@@ -31,12 +31,13 @@ const FORMAT_LABELS: Record<ResumeFormat, string> = {
 };
 
 const STEPS = [
-  { id: 1, label: "基本情報", short: "基本" },
-  { id: 2, label: "学歴",     short: "学歴" },
-  { id: 3, label: "職歴",     short: "職歴" },
-  { id: 4, label: "免許・資格", short: "資格" },
-  { id: 5, label: "志望動機・PR", short: "PR" },
-  { id: 6, label: "確認・DL", short: "確認" },
+  { id: 1, label: "基本情報",     short: "基本" },
+  { id: 2, label: "学歴",         short: "学歴" },
+  { id: 3, label: "職歴",         short: "職歴" },
+  { id: 4, label: "免許・資格",   short: "資格" },
+  { id: 5, label: "志望動機・PR", short: "PR"   },
+  { id: 6, label: "証明写真",     short: "写真" },
+  { id: 7, label: "確認・DL",     short: "確認" },
 ];
 
 export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutProps) {
@@ -177,7 +178,8 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
               {step === 3 && <WorkHistorySection />}
               {step === 4 && <LicenseSection />}
               {step === 5 && <MotivationSection />}
-              {step === 6 && (
+              {step === 6 && <PhotoStep />}
+              {step === 7 && (
                 <ReviewStep onPreview={() => setIsPreviewing(true)} onDownload={download} isGenerating={isGenerating} />
               )}
             </div>
@@ -224,16 +226,8 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
   );
 }
 
-/* ── Step 6: 確認・ダウンロード ─────────────────────────────────── */
-function ReviewStep({
-  onPreview,
-  onDownload,
-  isGenerating,
-}: {
-  onPreview: () => void;
-  onDownload: () => void;
-  isGenerating: boolean;
-}) {
+/* ── Step 6: 証明写真 ────────────────────────────────────────────── */
+function PhotoStep() {
   const photoUrl = useResumeStore((s) => s.current?.personalInfo.photoUrl ?? "");
   const updatePersonalInfo = useResumeStore((s) => s.updatePersonalInfo);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -243,75 +237,88 @@ function ReviewStep({
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
-      const dataUrl = ev.target?.result as string;
-      updatePersonalInfo({ photoUrl: dataUrl });
+      updatePersonalInfo({ photoUrl: ev.target?.result as string });
     };
     reader.readAsDataURL(file);
   };
 
   return (
-    <div className="space-y-6 py-4">
-      {/* 写真アップロード */}
-      <div className="rounded-xl border border-slate-200 p-5 space-y-3 bg-slate-50/50">
-        <p className="text-sm font-semibold text-slate-700">証明写真</p>
-        <div className="flex items-start gap-5">
-          {/* 写真プレビュー */}
-          <div
-            className="relative w-24 h-32 flex-shrink-0 rounded-lg border-2 border-dashed border-slate-300 bg-white flex items-center justify-center overflow-hidden cursor-pointer hover:border-indigo-400 transition-colors"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            {photoUrl ? (
-              <>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={photoUrl} alt="証明写真" className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-black/30 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <Camera className="h-5 w-5 text-white" />
-                </div>
-              </>
-            ) : (
-              <div className="flex flex-col items-center gap-1.5 text-slate-400">
-                <Camera className="h-7 w-7" />
-                <span className="text-[10px] font-medium text-center leading-tight">タップして<br />追加</span>
+    <div className="space-y-5">
+      <p className="text-sm text-slate-500">
+        縦4cm×横3cm程度の証明写真を推奨します。JPEG・PNG形式に対応しています。
+      </p>
+
+      <div className="flex items-start gap-6">
+        {/* プレビュー */}
+        <div
+          className="relative w-28 h-36 flex-shrink-0 rounded-xl border-2 border-dashed border-slate-300 bg-white flex items-center justify-center overflow-hidden cursor-pointer hover:border-indigo-400 transition-colors"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          {photoUrl ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={photoUrl} alt="証明写真" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-black/30 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+                <Camera className="h-6 w-6 text-white" />
               </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center gap-2 text-slate-400">
+              <Camera className="h-8 w-8" />
+              <span className="text-xs font-medium text-center leading-tight">タップして<br />追加</span>
+            </div>
+          )}
+        </div>
+
+        <div className="flex-1 space-y-3">
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="text-sm font-medium px-4 py-2 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
+            >
+              {photoUrl ? "写真を変更" : "写真を選択"}
+            </button>
+            {photoUrl && (
+              <button
+                onClick={() => updatePersonalInfo({ photoUrl: "" })}
+                className="text-sm font-medium px-4 py-2 rounded-xl bg-red-50 text-red-500 hover:bg-red-100 transition-colors flex items-center gap-1.5"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                削除
+              </button>
             )}
           </div>
-
-          <div className="flex-1 space-y-2">
-            <p className="text-xs text-slate-500 leading-relaxed">
-              縦4cm×横3cm程度の証明写真を推奨します。<br />
-              JPEG・PNG形式に対応しています。
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="text-xs font-medium px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
-              >
-                {photoUrl ? "写真を変更" : "写真を選択"}
-              </button>
-              {photoUrl && (
-                <button
-                  onClick={() => updatePersonalInfo({ photoUrl: "" })}
-                  className="text-xs font-medium px-3 py-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors flex items-center gap-1"
-                >
-                  <Trash2 className="h-3 w-3" />
-                  削除
-                </button>
-              )}
-            </div>
-          </div>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            写真はPDFに印刷されます。省略することも可能です。
+          </p>
         </div>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={handlePhotoChange}
-        />
       </div>
 
-      {/* 完了メッセージ */}
-      <div className="text-center space-y-2">
-        <div className="text-5xl">🎉</div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handlePhotoChange}
+      />
+    </div>
+  );
+}
+
+/* ── Step 7: 確認・ダウンロード ─────────────────────────────────── */
+function ReviewStep({
+  onPreview,
+  onDownload,
+  isGenerating,
+}: {
+  onPreview: () => void;
+  onDownload: () => void;
+  isGenerating: boolean;
+}) {
+  return (
+    <div className="space-y-6 text-center py-4">
+      <div className="text-5xl">🎉</div>
+      <div className="space-y-2">
         <h3 className="text-xl font-black text-slate-900">入力完了！</h3>
         <p className="text-slate-500 text-sm">
           内容を確認して、PDFをダウンロードしましょう。
@@ -327,7 +334,7 @@ function ReviewStep({
           PDFをダウンロード
         </Button>
       </div>
-      <p className="text-xs text-slate-400 text-center">
+      <p className="text-xs text-slate-400">
         ダウンロード後も編集・再ダウンロードできます
       </p>
     </div>

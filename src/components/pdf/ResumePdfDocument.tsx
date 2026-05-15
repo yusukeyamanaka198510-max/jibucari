@@ -218,16 +218,29 @@ export function ResumePdfDocument({ resume }: Props) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>職歴</Text>
           {workHistory.map((w) => (
-            <View key={w.id} style={styles.tableRow}>
-              <Text style={styles.tableColDate}>
-                {formatYearMonth(w.year, w.month)}
-              </Text>
-              <Text style={styles.tableColContent}>
-                {w.company}
-                {w.department ? `　${w.department}` : ""}
-                {w.position ? `　${w.position}` : ""}
-              </Text>
-              <Text style={styles.tableColStatus}>{STATUS_JA[w.status] ?? ""}</Text>
+            <View key={w.id}>
+              <View style={styles.tableRow}>
+                <Text style={styles.tableColDate}>
+                  {formatYearMonth(w.entryYear, w.entryMonth)}
+                </Text>
+                <Text style={styles.tableColContent}>
+                  {w.company}
+                  {w.department ? `　${w.department}` : ""}
+                  {w.position ? `　${w.position}` : ""}
+                </Text>
+                <Text style={styles.tableColStatus}>入社</Text>
+              </View>
+              {(w.isCurrent || w.exitYear != null) && (
+                <View style={styles.tableRow}>
+                  <Text style={styles.tableColDate}>
+                    {w.isCurrent ? "" : formatYearMonth(w.exitYear!, w.exitMonth ?? 3)}
+                  </Text>
+                  <Text style={styles.tableColContent}>
+                    {w.isCurrent ? "現在に至る" : "同社　退職"}
+                  </Text>
+                  <Text style={styles.tableColStatus}>{w.isCurrent ? "" : "退職"}</Text>
+                </View>
+              )}
             </View>
           ))}
           {workHistory.length === 0 && (

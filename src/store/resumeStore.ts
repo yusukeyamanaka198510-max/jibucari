@@ -37,7 +37,7 @@ interface ResumeActions {
   updateWork: (id: string, patch: Partial<WorkEntry>) => void;
   removeWork: (id: string) => void;
 
-  addLicense: (category?: LicenseEntry["category"]) => void;
+  addLicense: (category?: LicenseEntry["category"], name?: string) => void;
   updateLicense: (id: string, patch: Partial<LicenseEntry>) => void;
   removeLicense: (id: string) => void;
 
@@ -97,8 +97,11 @@ export const useResumeStore = create<ResumeStore>()(
         initEducationFromBirthDate: (birthDate) =>
           set((s) => {
             if (!s.current) return;
-            const allEmpty = s.current.education.every((e) => !e.school);
-            if (!allEmpty) return;
+            const PLACEHOLDERS = ["○○小学校", "○○中学校", "○○高等学校"];
+            const canAutoFill = s.current.education.every(
+              (e) => !e.school || PLACEHOLDERS.includes(e.school)
+            );
+            if (!canAutoFill) return;
             s.current.education = createEducationFromBirthDate(birthDate);
           }),
 
@@ -117,8 +120,8 @@ export const useResumeStore = create<ResumeStore>()(
             s.current.workHistory = s.current.workHistory.filter((e) => e.id !== id);
           }),
 
-        addLicense: (category = "license") =>
-          set((s) => { s.current?.licenses.push(createLicenseEntry(category)); }),
+        addLicense: (category = "license", name = "") =>
+          set((s) => { s.current?.licenses.push(createLicenseEntry(category, name)); }),
 
         updateLicense: (id, patch) =>
           set((s) => {

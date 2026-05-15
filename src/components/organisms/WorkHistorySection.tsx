@@ -7,11 +7,7 @@ import { FormField } from "@/components/molecules/FormField";
 import { YearMonthSelector } from "@/components/molecules/YearMonthSelector";
 import { Input } from "@/components/atoms/Input";
 import { Textarea } from "@/components/atoms/Textarea";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/atoms/Select";
 import { cn } from "@/lib/utils";
-import type { WorkStatus } from "@/types";
 
 const POSITION_CANDIDATES = [
   "営業", "内勤営業", "法人営業", "個人営業", "販売・接客", "店長",
@@ -25,12 +21,6 @@ const POSITION_CANDIDATES = [
   "医師", "看護師", "薬剤師", "介護士", "保育士", "教師・講師",
   "料理人・シェフ", "美容師", "理容師",
   "主任", "係長", "課長", "部長", "マネージャー", "チームリーダー", "役員",
-];
-
-const STATUS_OPTIONS: { value: WorkStatus; label: string }[] = [
-  { value: "joined", label: "入社" },
-  { value: "resigned", label: "退職" },
-  { value: "current", label: "在職中" },
 ];
 
 export function WorkHistorySection({ className }: { className?: string }) {
@@ -83,7 +73,9 @@ export function WorkHistorySection({ className }: { className?: string }) {
             {workHistory.map((entry, index) => (
               <li key={entry.id} className="rounded-xl border border-slate-200 p-4 space-y-3 bg-slate-50/50">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-indigo-600 uppercase tracking-wide">職歴 {index + 1}</span>
+                  <span className="text-xs font-semibold text-indigo-600 uppercase tracking-wide">
+                    職歴 {index + 1}
+                  </span>
                   <button
                     onClick={() => removeWork(entry.id)}
                     className="text-slate-400 hover:text-red-500 transition-colors"
@@ -93,6 +85,7 @@ export function WorkHistorySection({ className }: { className?: string }) {
                   </button>
                 </div>
 
+                {/* 会社名・役職・部署 */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <FormField id={`work-company-${entry.id}`} label="会社名" required>
                     <Input
@@ -124,29 +117,50 @@ export function WorkHistorySection({ className }: { className?: string }) {
                       placeholder="開発部"
                     />
                   </FormField>
-                  <FormField id={`work-year-${entry.id}`} label="年月" required>
-                    <YearMonthSelector
-                      year={entry.year}
-                      month={entry.month}
-                      onYearChange={(y) => updateWork(entry.id, { year: y })}
-                      onMonthChange={(m) => updateWork(entry.id, { month: m })}
-                    />
-                  </FormField>
-                  <FormField id={`work-status-${entry.id}`} label="状態" required>
-                    <Select
-                      value={entry.status}
-                      onValueChange={(v) => updateWork(entry.id, { status: v as WorkStatus })}
-                    >
-                      <SelectTrigger id={`work-status-${entry.id}`}><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {STATUS_OPTIONS.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormField>
                 </div>
 
+                {/* 入社 */}
+                <div className="rounded-lg bg-white border border-slate-100 p-3 space-y-2">
+                  <p className="text-xs font-semibold text-slate-500">入社</p>
+                  <YearMonthSelector
+                    year={entry.entryYear}
+                    month={entry.entryMonth}
+                    onYearChange={(y) => updateWork(entry.id, { entryYear: y })}
+                    onMonthChange={(m) => updateWork(entry.id, { entryMonth: m })}
+                  />
+                </div>
+
+                {/* 退社 */}
+                <div className="rounded-lg bg-white border border-slate-100 p-3 space-y-2">
+                  <p className="text-xs font-semibold text-slate-500">退社</p>
+                  <div className="flex flex-wrap items-center gap-3">
+                    {!entry.isCurrent && (
+                      <YearMonthSelector
+                        year={entry.exitYear ?? entry.entryYear}
+                        month={entry.exitMonth ?? entry.entryMonth}
+                        onYearChange={(y) => updateWork(entry.id, { exitYear: y, isCurrent: false })}
+                        onMonthChange={(m) => updateWork(entry.id, { exitMonth: m, isCurrent: false })}
+                      />
+                    )}
+                    <button
+                      onClick={() => updateWork(entry.id, {
+                        isCurrent: !entry.isCurrent,
+                        exitYear: undefined,
+                        exitMonth: undefined,
+                      })}
+                      className={cn(
+                        "px-3 py-1.5 rounded-lg text-xs font-semibold border-2 transition-all",
+                        entry.isCurrent
+                          ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                          : "border-slate-200 text-slate-500 hover:border-slate-300"
+                      )}
+                    >
+                      在職中（現在に至る）
+                    </button>
+                  </div>
+                </div>
+
+                {/* 業務内容 */}
                 <FormField id={`work-desc-${entry.id}`} label="業務内容">
                   <Textarea
                     id={`work-desc-${entry.id}`}

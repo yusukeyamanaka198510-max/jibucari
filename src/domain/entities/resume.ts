@@ -93,22 +93,27 @@ export function createEducationFromBirthDate(birthDate: string): EducationEntry[
 export function createWorkEntry(): WorkEntry {
   return {
     id: uuidv4(),
-    year: new Date().getFullYear(),
-    month: 4,
     company: "",
     department: "",
     position: "",
     description: "",
-    status: "joined",
+    entryYear: new Date().getFullYear(),
+    entryMonth: 4,
+    exitYear: undefined,
+    exitMonth: undefined,
+    isCurrent: false,
   };
 }
 
-export function createLicenseEntry(category: LicenseEntry["category"] = "license"): LicenseEntry {
+export function createLicenseEntry(
+  category: LicenseEntry["category"] = "license",
+  name = ""
+): LicenseEntry {
   return {
     id: uuidv4(),
     year: new Date().getFullYear(),
     month: 1,
-    name: "",
+    name,
     category,
   };
 }
@@ -133,6 +138,6 @@ export function sortEducationEntries(entries: EducationEntry[]): EducationEntry[
 
 export function sortWorkEntries(entries: WorkEntry[]): WorkEntry[] {
   return [...entries].sort((a, b) =>
-    a.year !== b.year ? a.year - b.year : a.month - b.month
+    a.entryYear !== b.entryYear ? a.entryYear - b.entryYear : a.entryMonth - b.entryMonth
   );
 }
