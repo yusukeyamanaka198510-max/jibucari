@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { pdf } from "@react-pdf/renderer";
 import { createElement } from "react";
+import type { ReactElement } from "react";
 import { ResumePdfDocument } from "@/components/pdf/ResumePdfDocument";
 import type { Resume } from "@/types";
 
@@ -12,10 +13,6 @@ interface UsePdfDownloadReturn {
   error: string | null;
 }
 
-/**
- * 履歴書エンティティから PDF を生成してダウンロードするフック。
- * プレビューを使わず直接ダウンロードしたい箇所で使用する。
- */
 export function usePdfDownload(resume: Resume | null): UsePdfDownloadReturn {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +22,8 @@ export function usePdfDownload(resume: Resume | null): UsePdfDownloadReturn {
     setIsGenerating(true);
     setError(null);
     try {
-      const element = createElement(ResumePdfDocument, { resume });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const element = createElement(ResumePdfDocument, { resume }) as ReactElement<any>;
       const blob = await pdf(element).toBlob();
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
