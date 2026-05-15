@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, createElement } from "react";
+import { pdf } from "@react-pdf/renderer";
 import { useResumeStore } from "@/store/resumeStore";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { usePdfDownload } from "@/hooks/usePdfDownload";
@@ -11,9 +12,13 @@ import { LicenseSection } from "@/components/organisms/LicenseSection";
 import { MotivationSection } from "@/components/organisms/MotivationSection";
 import { AutoSaveIndicator } from "@/components/molecules/AutoSaveIndicator";
 import { PdfPreviewModal } from "@/components/pdf/PdfPreviewModal";
+import { ResumePdfDocument } from "@/components/pdf/ResumePdfDocument";
 import { Button } from "@/components/atoms/Button";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Download, Eye, Check, Camera, Mail, Trash2 } from "lucide-react";
+import {
+  ChevronLeft, ChevronRight, Download, Eye, Check,
+  Camera, Mail, Trash2, CalendarDays, X, CheckCircle2,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ResumeFormat } from "@/types";
 
@@ -43,9 +48,11 @@ const STEPS = [
 export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutProps) {
   const initNew = useResumeStore((s) => s.initNew);
   const current = useResumeStore((s) => s.current);
-  const saved = useResumeStore((s) => s.saved);
-  const [step, setStep] = useState(1);
+  const saved   = useResumeStore((s) => s.saved);
+  const [step, setStep]             = useState(1);
   const [isPreviewing, setIsPreviewing] = useState(false);
+  const [isEmailSending, setIsEmailSending] = useState(false);
+  const [emailSent, setEmailSent]   = useState(false);
 
   const { download, isGenerating } = usePdfDownload(current);
 
@@ -71,6 +78,43 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
     );
   }
 
+  // メール送信（API経由）
+  const handleSendEmail = async () => {
+    if (!current.personalInfo.email) {
+      alert("基本情報にメールアドレスを入力してください。");
+      return;
+    }
+    setIsEmailSending(true);
+    setEmailSent(false);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const element = createElement(ResumePdfDocument, { resume: current }) as any;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const blob = await (pdf as any)(element).toBlob();
+      const arrayBuffer = await blob.arrayBuffer();
+      const uint8 = new Uint8Array(arrayBuffer);
+      const base64 = btoa(uint8.reduce((acc, b) => acc + String.fromCharCode(b), ""));
+      const name = `${current.personalInfo.lastName}${current.personalInfo.firstName}`;
+
+      const res = await fetch("/api/email/send-resume", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pdfBase64: base64, email: current.personalInfo.email, name }),
+      });
+
+      if (res.ok) {
+        setEmailSent(true);
+      } else {
+        const { error } = await res.json();
+        alert(`メール送信に失敗しました: ${error ?? "不明なエラー"}`);
+      }
+    } catch {
+      alert("メール送信中にエラーが発生しました。");
+    } finally {
+      setIsEmailSending(false);
+    }
+  };
+
   const progress = Math.round(((step - 1) / (STEPS.length - 1)) * 100);
 
   return (
@@ -94,8 +138,6 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
             </div>
             <AutoSaveIndicator className="hidden sm:flex" />
           </div>
-
-          {/* プログレスバー */}
           <div className="h-1 bg-slate-100">
             <div
               className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all duration-500"
@@ -109,7 +151,7 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
           <div className="max-w-2xl mx-auto px-4 py-3">
             <ol className="flex items-center gap-1 sm:gap-2">
               {STEPS.map((s, i) => {
-                const isDone = step > s.id;
+                const isDone   = step > s.id;
                 const isActive = step === s.id;
                 return (
                   <li key={s.id} className="flex items-center flex-1 min-w-0">
@@ -161,7 +203,6 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
         {/* ── フォーム本体 ── */}
         <main className="max-w-2xl mx-auto px-4 py-8">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
-            {/* ステップタイトル */}
             <div className="mb-6">
               <p className="text-xs text-indigo-600 font-semibold tracking-widest uppercase mb-1">
                 Step {step} / {STEPS.length}
@@ -171,7 +212,6 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
               </h2>
             </div>
 
-            {/* ステップコンテンツ */}
             <div className="space-y-6">
               {step === 1 && <PersonalInfoSection />}
               {step === 2 && <EducationSection />}
@@ -180,7 +220,14 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
               {step === 5 && <MotivationSection />}
               {step === 6 && <PhotoStep />}
               {step === 7 && (
-                <ReviewStep onPreview={() => setIsPreviewing(true)} onDownload={download} isGenerating={isGenerating} />
+                <ReviewStep
+                  onPreview={() => setIsPreviewing(true)}
+                  onDownload={download}
+                  isGenerating={isGenerating}
+                  onEmailSend={handleSendEmail}
+                  isEmailSending={isEmailSending}
+                  emailSent={emailSent}
+                />
               )}
             </div>
           </div>
@@ -228,8 +275,7 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
 
 /* ── Step 6: 証明写真 ────────────────────────────────────────────── */
 async function detectFace(file: File): Promise<boolean> {
-  // ブラウザネイティブ FaceDetector API (Chrome/Edge のみ対応)
-  if (!("FaceDetector" in window)) return true; // 未対応ブラウザはスキップ
+  if (!("FaceDetector" in window)) return true;
   try {
     const bitmap = await createImageBitmap(file);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -237,7 +283,7 @@ async function detectFace(file: File): Promise<boolean> {
     const faces = await detector.detect(bitmap);
     return faces.length > 0;
   } catch {
-    return true; // 検出失敗時は通過させる
+    return true;
   }
 }
 
@@ -250,15 +296,9 @@ function PhotoStep() {
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    // 顔検出チェック
     setFaceWarning(false);
     const hasFace = await detectFace(file);
-    if (!hasFace) {
-      setFaceWarning(true);
-      // 警告は出すが選択はキャンセルしない（ユーザーが続行できるよう）
-    }
-
+    if (!hasFace) setFaceWarning(true);
     const reader = new FileReader();
     reader.onload = (ev) => {
       updatePersonalInfo({ photoUrl: ev.target?.result as string });
@@ -280,7 +320,6 @@ function PhotoStep() {
       )}
 
       <div className="flex items-start gap-6">
-        {/* プレビュー */}
         <div
           className="relative w-28 h-36 flex-shrink-0 rounded-xl border-2 border-dashed border-slate-300 bg-white flex items-center justify-center overflow-hidden cursor-pointer hover:border-indigo-400 transition-colors"
           onClick={() => fileInputRef.current?.click()}
@@ -337,35 +376,82 @@ function PhotoStep() {
 }
 
 /* ── Step 7: 確認・ダウンロード ─────────────────────────────────── */
+
+const CONSULTATION_TOPICS = [
+  { value: "job_hunting",   label: "就職活動の進め方" },
+  { value: "resume_review", label: "履歴書・職務経歴書の添削" },
+  { value: "interview_prep",label: "面接対策" },
+  { value: "career_change", label: "転職・キャリアチェンジ" },
+  { value: "industry_advice",label: "業界・職種の相談" },
+  { value: "other",         label: "その他" },
+];
+
 function ReviewStep({
   onPreview,
   onDownload,
   isGenerating,
+  onEmailSend,
+  isEmailSending,
+  emailSent,
 }: {
   onPreview: () => void;
   onDownload: () => void;
   isGenerating: boolean;
+  onEmailSend: () => Promise<void>;
+  isEmailSending: boolean;
+  emailSent: boolean;
 }) {
   const info = useResumeStore((s) => s.current?.personalInfo);
   const name = info ? `${info.lastName}${info.firstName}` : "";
 
-  const handleEmailSend = async () => {
-    await onDownload();
-    const subject = encodeURIComponent("履歴書のご送付");
-    const body = encodeURIComponent(
-      `${name} と申します。\n\nダウンロードした履歴書PDFを添付してお送りします。\n\nよろしくお願いいたします。`
-    );
-    window.open(`mailto:?subject=${subject}&body=${body}`);
+  const [consultOpen, setConsultOpen]   = useState(false);
+  const [date1, setDate1]               = useState("");
+  const [date2, setDate2]               = useState("");
+  const [date3, setDate3]               = useState("");
+  const [topic, setTopic]               = useState("job_hunting");
+  const [isSending, setIsSending]       = useState(false);
+  const [sendSuccess, setSendSuccess]   = useState(false);
+  const [sendError, setSendError]       = useState("");
+
+  const handleConsultSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!date1) { setSendError("第一希望日を入力してください。"); return; }
+    setIsSending(true);
+    setSendError("");
+    try {
+      const res = await fetch("/api/email/consultation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          email: info?.email ?? "",
+          phone: info?.mobilePhone ?? "",
+          date1,
+          date2,
+          date3,
+          topic,
+        }),
+      });
+      if (res.ok) {
+        setSendSuccess(true);
+      } else {
+        const { error } = await res.json();
+        setSendError(error ?? "送信に失敗しました。");
+      }
+    } catch {
+      setSendError("通信エラーが発生しました。");
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
-    <div className="space-y-6 py-4">
+    <div className="space-y-6 py-2">
+      {/* 完了メッセージ */}
       <div className="text-center space-y-2">
         <div className="text-5xl">🎉</div>
         <h3 className="text-xl font-black text-slate-900">入力完了！</h3>
-        <p className="text-slate-500 text-sm">
-          内容を確認して、PDFを保存・送信しましょう。
-        </p>
+        <p className="text-slate-500 text-sm">内容を確認して、PDFを保存・送信しましょう。</p>
       </div>
 
       {/* プレビュー */}
@@ -380,18 +466,147 @@ function ReviewStep({
       <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-3">
         <p className="text-sm font-semibold text-slate-700">書類を保存・送る</p>
         <div className="flex flex-col sm:flex-row gap-2">
-          <Button onClick={onDownload} isLoading={isGenerating} variant="outline" className="gap-2 flex-1">
+          <Button
+            onClick={onDownload}
+            isLoading={isGenerating}
+            variant="outline"
+            className="gap-2 flex-1"
+          >
             <Download className="h-4 w-4" />
             PDFをダウンロード
           </Button>
-          <Button onClick={handleEmailSend} isLoading={isGenerating} className="gap-2 flex-1">
-            <Mail className="h-4 w-4" />
-            メールで転送
+          <Button
+            onClick={onEmailSend}
+            isLoading={isEmailSending}
+            disabled={emailSent}
+            className="gap-2 flex-1"
+          >
+            {emailSent ? (
+              <>
+                <CheckCircle2 className="h-4 w-4" />
+                送信済み
+              </>
+            ) : (
+              <>
+                <Mail className="h-4 w-4" />
+                メールで受け取る
+              </>
+            )}
           </Button>
         </div>
+        {emailSent && (
+          <p className="text-xs text-emerald-600 font-medium">
+            ✓ {info?.email} にPDFを送信しました
+          </p>
+        )}
         <p className="text-xs text-slate-400">
-          「メールで転送」はPDFをダウンロードしてメールアプリを起動します。PDFを添付してお使いください。
+          「メールで受け取る」は基本情報に入力したメールアドレス宛にPDFを送信します。
         </p>
+      </div>
+
+      {/* ─────────── ジブキャリ面談依頼 ─────────── */}
+      <div className="rounded-xl border-2 border-indigo-200 bg-indigo-50/40 p-4 space-y-3">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <p className="text-sm font-bold text-indigo-800">ジブキャリスタッフに面談依頼</p>
+            <p className="text-xs text-indigo-600 mt-0.5">
+              就活・転職のプロが無料で相談に乗ります
+            </p>
+          </div>
+          <CalendarDays className="h-5 w-5 text-indigo-400 flex-shrink-0 mt-0.5" />
+        </div>
+
+        {!consultOpen && !sendSuccess && (
+          <Button
+            onClick={() => setConsultOpen(true)}
+            className="w-full bg-indigo-600 hover:bg-indigo-700 gap-2"
+          >
+            <CalendarDays className="h-4 w-4" />
+            面談を申し込む
+          </Button>
+        )}
+
+        {/* 面談フォーム */}
+        {consultOpen && !sendSuccess && (
+          <form onSubmit={handleConsultSubmit} className="space-y-4 pt-1">
+            {/* 相談内容 */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-700">
+                相談内容 <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
+              >
+                {CONSULTATION_TOPICS.map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* 希望日 */}
+            <div className="space-y-2">
+              {[
+                { label: "第一希望日", val: date1, set: setDate1, required: true },
+                { label: "第二希望日", val: date2, set: setDate2, required: false },
+                { label: "第三希望日", val: date3, set: setDate3, required: false },
+              ].map(({ label, val, set, required }) => (
+                <div key={label} className="space-y-0.5">
+                  <label className="text-xs font-semibold text-slate-700">
+                    {label}
+                    {required && <span className="text-red-500 ml-0.5">*</span>}
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={val}
+                    onChange={(e) => set(e.target.value)}
+                    required={required}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
+                  />
+                </div>
+              ))}
+            </div>
+
+            {sendError && (
+              <p className="text-xs text-red-500">{sendError}</p>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => { setConsultOpen(false); setSendError(""); }}
+                className="flex-1 py-2 rounded-lg border border-slate-300 text-sm text-slate-600 hover:bg-slate-50 transition-colors flex items-center justify-center gap-1"
+              >
+                <X className="h-3.5 w-3.5" />
+                キャンセル
+              </button>
+              <button
+                type="submit"
+                disabled={isSending}
+                className="flex-1 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors disabled:opacity-60 flex items-center justify-center gap-1"
+              >
+                {isSending ? (
+                  <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                ) : (
+                  <>
+                    <CalendarDays className="h-3.5 w-3.5" />
+                    送信する
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* 送信成功 */}
+        {sendSuccess && (
+          <div className="flex flex-col items-center gap-2 py-3 text-center">
+            <CheckCircle2 className="h-8 w-8 text-emerald-500" />
+            <p className="text-sm font-bold text-slate-800">面談依頼を送信しました！</p>
+            <p className="text-xs text-slate-500">担当スタッフより日程のご連絡をいたします。</p>
+          </div>
+        )}
       </div>
 
       <p className="text-xs text-slate-400 text-center">
