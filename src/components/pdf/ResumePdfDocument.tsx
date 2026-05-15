@@ -11,12 +11,12 @@ import type { Resume } from "@/types";
 import { formatYearMonth } from "@/lib/utils";
 import { calculateAge } from "@/domain/entities/resume";
 
-// 日本語フォント登録（Noto Sans JPを使用 — publicフォルダに配置する運用）
+// 日本語フォント登録（Noto Sans JP OTF — public/fonts に配置）
 Font.register({
   family: "NotoSansJP",
   fonts: [
-    { src: "/fonts/NotoSansJP-Regular.woff", fontWeight: 400 },
-    { src: "/fonts/NotoSansJP-Bold.woff", fontWeight: 700 },
+    { src: "/fonts/NotoSansJP-Regular.ttf", fontWeight: 400 },
+    { src: "/fonts/NotoSansJP-Bold.ttf", fontWeight: 700 },
   ],
 });
 
