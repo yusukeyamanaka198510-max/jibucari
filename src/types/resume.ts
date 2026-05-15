@@ -3,7 +3,8 @@ export type ResumeFormat =
   | "jis"           // JIS規格（一般用）
   | "career_change" // 転職用
   | "new_graduate"  // 新卒用
-  | "part_time";    // アルバイト用
+  | "part_time"     // アルバイト用
+  | "no_photo";     // 写真なし（WEB応募向け）
 
 // ─── 選択肢型 ─────────────────────────────────────────────────────────────────
 export type Gender = "male" | "female" | "other" | "prefer_not_to_say";

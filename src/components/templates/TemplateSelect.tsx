@@ -1,61 +1,102 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronLeft, ArrowRight } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-const TEMPLATES = [
+/* ── ドキュメントモック ─────────────────────────────────────── */
+function DocMock({ lines = 5, hasPhoto = false }: { lines?: number; hasPhoto?: boolean }) {
+  return (
+    <div className="w-full aspect-[3/2] bg-white rounded-lg border border-slate-200 p-3 flex gap-2 overflow-hidden">
+      {hasPhoto && (
+        <div className="w-10 h-12 rounded bg-slate-200 shrink-0 self-start" />
+      )}
+      <div className="flex-1 space-y-1.5 pt-0.5">
+        <div className="h-2.5 w-3/5 rounded bg-slate-700" />
+        <div className="h-1.5 w-4/5 rounded bg-slate-300" />
+        <div className="h-1.5 w-2/3 rounded bg-slate-200" />
+        {Array.from({ length: Math.max(0, lines - 3) }).map((_, i) => (
+          <div key={i} className={cn("h-1.5 rounded bg-slate-200", i % 2 === 0 ? "w-4/5" : "w-3/5")} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── テンプレート定義 ──────────────────────────────────────── */
+type TemplateItem =
+  | { type: "link"; format: string; href: string; label: string; sub: string; size: string; badge?: string; badgeColor?: string; hasPhoto?: boolean; lines?: number }
+  | { type: "disabled"; label: string; sub: string; size: string; badge: string; badgeColor: string; lines?: number };
+
+const TEMPLATES: TemplateItem[] = [
   {
-    format: "jis",
-    label: "JIS規格 履歴書",
-    sub: "一般用・最もスタンダードな履歴書",
-    badge: "定番",
-    badgeColor: "bg-indigo-100 text-indigo-700",
-    accent: "from-indigo-500 to-violet-500",
-    bg: "hover:bg-indigo-50/60",
-    border: "hover:border-indigo-300",
-    emoji: "📋",
-  },
-  {
+    type: "link",
     format: "career_change",
-    label: "転職用 履歴書",
-    sub: "社会人経験をアピールする転職向け",
-    badge: "人気",
-    badgeColor: "bg-violet-100 text-violet-700",
-    accent: "from-violet-500 to-purple-500",
-    bg: "hover:bg-violet-50/60",
-    border: "hover:border-violet-300",
-    emoji: "💼",
+    href: "/resume/new?format=career_change",
+    label: "転職履歴書",
+    sub: "職歴欄をしっかり書ける標準タイプ",
+    size: "A4 / 2枚",
+    hasPhoto: true,
+    lines: 6,
   },
   {
+    type: "link",
     format: "new_graduate",
-    label: "新卒用 履歴書",
-    sub: "学生・第二新卒向けレイアウト",
-    badge: "新卒",
-    badgeColor: "bg-sky-100 text-sky-700",
-    accent: "from-sky-500 to-indigo-500",
-    bg: "hover:bg-sky-50/60",
-    border: "hover:border-sky-300",
-    emoji: "🎓",
+    href: "/resume/new?format=new_graduate",
+    label: "新卒履歴書",
+    sub: "学歴・自己PRを中心に整理",
+    size: "A4 / 2枚",
+    hasPhoto: true,
+    lines: 5,
   },
   {
+    type: "link",
     format: "part_time",
-    label: "アルバイト用 履歴書",
-    sub: "パート・アルバイト応募に最適",
-    badge: "シンプル",
-    badgeColor: "bg-emerald-100 text-emerald-700",
-    accent: "from-emerald-500 to-teal-500",
-    bg: "hover:bg-emerald-50/60",
-    border: "hover:border-emerald-300",
-    emoji: "⭐",
+    href: "/resume/new?format=part_time",
+    label: "アルバイト履歴書",
+    sub: "勤務希望やシフトを記入しやすい",
+    size: "A4 / 1枚",
+    hasPhoto: true,
+    lines: 4,
+  },
+  {
+    type: "link",
+    format: "no_photo",
+    href: "/resume/new?format=no_photo",
+    label: "写真なし履歴書",
+    sub: "WEB応募向けの写真なしタイプ",
+    size: "A4 / 1枚",
+    hasPhoto: false,
+    lines: 5,
+  },
+  {
+    type: "link",
+    format: "cv",
+    href: "/cv/new",
+    label: "職務経歴書",
+    sub: "職務要約・経歴・スキルを整理",
+    size: "A4 / 複数枚",
+    hasPhoto: false,
+    lines: 6,
+  },
+  {
+    type: "disabled",
+    label: "両方まとめて作る",
+    sub: "履歴書と職務経歴書をまとめて作成",
+    size: "",
+    badge: "次期対応",
+    badgeColor: "bg-amber-100 text-amber-700",
+    lines: 5,
   },
 ];
 
+/* ── コンポーネント ────────────────────────────────────────── */
 export function TemplateSelect() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-slate-50">
       {/* ヘッダー */}
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur border-b border-slate-100">
-        <div className="max-w-3xl mx-auto px-5 h-14 flex items-center gap-3">
+        <div className="max-w-4xl mx-auto px-5 h-14 flex items-center gap-3">
           <Link
             href="/"
             className="flex items-center gap-1 text-xs text-slate-400 hover:text-indigo-600 transition-colors"
@@ -71,36 +112,66 @@ export function TemplateSelect() {
       </header>
 
       {/* コンテンツ */}
-      <main className="max-w-3xl mx-auto px-5 py-12">
+      <main className="max-w-4xl mx-auto px-5 py-12">
         <div className="text-center mb-10 space-y-2">
           <p className="text-indigo-600 font-semibold text-sm tracking-widest uppercase">Step 1</p>
           <h1 className="text-3xl font-black text-slate-900">テンプレートを選んでください</h1>
           <p className="text-slate-500 text-sm">あとからでも変更できます</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {TEMPLATES.map((t) => (
-            <Link
-              key={t.format}
-              href={`/resume/new?format=${t.format}`}
-              className={`group relative flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-6 ${t.bg} ${t.border} transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5`}
-            >
-              {/* 左アクセントライン */}
-              <div className={`absolute inset-y-0 left-0 w-1 rounded-l-2xl bg-gradient-to-b ${t.accent}`} />
-
-              <span className="text-4xl">{t.emoji}</span>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <p className="font-bold text-slate-900">{t.label}</p>
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${t.badgeColor}`}>
-                    {t.badge}
-                  </span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {TEMPLATES.map((t) => {
+            if (t.type === "disabled") {
+              return (
+                <div
+                  key={t.label}
+                  className="relative flex flex-col bg-white rounded-2xl border border-slate-200 p-5 opacity-60 cursor-not-allowed"
+                >
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className={cn("text-xs font-semibold px-2 py-0.5 rounded-full", t.badgeColor)}>
+                      {t.badge}
+                    </span>
+                  </div>
+                  <DocMock lines={t.lines} hasPhoto={false} />
+                  <div className="mt-4 space-y-1">
+                    <p className="font-bold text-slate-900">{t.label}</p>
+                    <p className="text-xs text-slate-500">{t.sub}</p>
+                  </div>
+                  <div className="mt-4 w-full py-3 rounded-xl bg-slate-100 text-slate-400 text-sm font-semibold text-center">
+                    準備中
+                  </div>
                 </div>
-                <p className="text-xs text-slate-500">{t.sub}</p>
+              );
+            }
+
+            return (
+              <div key={t.format} className="relative flex flex-col bg-white rounded-2xl border border-slate-200 p-5 hover:border-teal-300 hover:shadow-lg transition-all duration-200 group">
+                <div className="flex items-center gap-2 mb-3">
+                  {t.size && (
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-100">
+                      {t.size}
+                    </span>
+                  )}
+                  {t.badge && (
+                    <span className={cn("text-xs font-semibold px-2 py-0.5 rounded-full", t.badgeColor)}>
+                      {t.badge}
+                    </span>
+                  )}
+                </div>
+                <DocMock lines={t.lines} hasPhoto={t.hasPhoto} />
+                <div className="mt-4 space-y-1 flex-1">
+                  <p className="font-bold text-slate-900">{t.label}</p>
+                  <p className="text-xs text-slate-500">{t.sub}</p>
+                </div>
+                <Link
+                  href={t.href}
+                  className="mt-4 block w-full py-3 rounded-xl bg-teal-500 hover:bg-teal-600 text-white text-sm font-bold text-center transition-colors"
+                >
+                  この履歴書で作る
+                </Link>
               </div>
-              <ArrowRight className="h-5 w-5 text-slate-300 group-hover:text-indigo-400 shrink-0 transition-colors" />
-            </Link>
-          ))}
+            );
+          })}
         </div>
 
         <p className="text-center text-xs text-slate-400 mt-8">

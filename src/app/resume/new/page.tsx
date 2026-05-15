@@ -5,7 +5,7 @@ import type { ResumeFormat } from "@/types";
 
 export const metadata: Metadata = { title: "履歴書を作成 | ジブキャリ" };
 
-const VALID_FORMATS: ResumeFormat[] = ["jis", "career_change", "new_graduate", "part_time"];
+const VALID_FORMATS: ResumeFormat[] = ["jis", "career_change", "new_graduate", "part_time", "no_photo"];
 
 interface Props {
   searchParams: { format?: string };

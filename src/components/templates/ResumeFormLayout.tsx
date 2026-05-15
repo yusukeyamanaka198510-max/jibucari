@@ -24,9 +24,10 @@ interface ResumeFormLayoutProps {
 
 const FORMAT_LABELS: Record<ResumeFormat, string> = {
   jis: "JIS規格 履歴書",
-  career_change: "転職用 履歴書",
-  new_graduate: "新卒用 履歴書",
-  part_time: "アルバイト用 履歴書",
+  career_change: "転職履歴書",
+  new_graduate: "新卒履歴書",
+  part_time: "アルバイト履歴書",
+  no_photo: "写真なし履歴書",
 };
 
 const STEPS = [
