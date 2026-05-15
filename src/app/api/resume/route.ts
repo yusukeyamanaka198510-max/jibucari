@@ -4,11 +4,16 @@ import { SupabaseResumeRepository } from "@/infrastructure/repositories/supabase
 import { createResumeUseCase } from "@/domain/usecases/createResume";
 import type { ResumeFormat } from "@/types";
 
+function unauthorized() {
+  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+}
+
 /** GET /api/resume — ユーザーの履歴書一覧取得 */
 export async function GET(req: NextRequest) {
   const supabase = createSupabaseServerClient();
+  if (!supabase) return unauthorized();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) return unauthorized();
 
   const { searchParams } = new URL(req.url);
   const page = Number(searchParams.get("page") ?? 1);
@@ -22,8 +27,9 @@ export async function GET(req: NextRequest) {
 /** POST /api/resume — 新規履歴書作成 */
 export async function POST(req: NextRequest) {
   const supabase = createSupabaseServerClient();
+  if (!supabase) return unauthorized();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) return unauthorized();
 
   const body = await req.json() as { format?: ResumeFormat; title?: string };
   const repo = new SupabaseResumeRepository(supabase);

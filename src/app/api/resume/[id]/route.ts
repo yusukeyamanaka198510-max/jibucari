@@ -8,11 +8,16 @@ interface RouteContext {
   params: { id: string };
 }
 
+function unauthorized() {
+  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+}
+
 /** GET /api/resume/[id] */
 export async function GET(_req: NextRequest, { params }: RouteContext) {
   const supabase = createSupabaseServerClient();
+  if (!supabase) return unauthorized();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) return unauthorized();
 
   const repo = new SupabaseResumeRepository(supabase);
   const resume = await repo.findById(params.id);
@@ -25,13 +30,13 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
 /** PATCH /api/resume/[id] — 部分更新 */
 export async function PATCH(req: NextRequest, { params }: RouteContext) {
   const supabase = createSupabaseServerClient();
+  if (!supabase) return unauthorized();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) return unauthorized();
 
   const patch = await req.json() as ResumeUpdate;
   const repo = new SupabaseResumeRepository(supabase);
 
-  // 所有者チェック
   const existing = await repo.findById(params.id);
   if (!existing || existing.userId !== user.id)
     return NextResponse.json({ error: "Not Found" }, { status: 404 });
@@ -47,8 +52,9 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
 /** DELETE /api/resume/[id] */
 export async function DELETE(_req: NextRequest, { params }: RouteContext) {
   const supabase = createSupabaseServerClient();
+  if (!supabase) return unauthorized();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) return unauthorized();
 
   const repo = new SupabaseResumeRepository(supabase);
   const existing = await repo.findById(params.id);
