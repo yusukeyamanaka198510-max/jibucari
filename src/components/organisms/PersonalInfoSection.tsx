@@ -24,17 +24,16 @@ const GENDER_OPTIONS: { value: Gender; label: string }[] = [
   { value: "prefer_not_to_say", label: "回答しない" },
 ];
 
-async function lookupPostalCode(code: string): Promise<{ address: string; kana: string } | null> {
-  const digits = code.replace(/-/g, "");
-  if (digits.length !== 7) return null;
+async function lookupPostalCode(digits: string): Promise<{ prefecture: string; city: string; kana: string } | null> {
   try {
     const res = await fetch(`https://zipcloud.ibsnet.co.jp/api/search?zipcode=${digits}`);
     const json = await res.json();
     if (json.status !== 200 || !json.results) return null;
     const r = json.results[0];
     return {
-      address: `${r.address1}${r.address2}${r.address3}`,
-      kana: `${r.kana1}${r.kana2}${r.kana3}`,
+      prefecture: r.address1 as string,
+      city: `${r.address2}${r.address3}` as string,
+      kana: `${r.kana1}${r.kana2}${r.kana3}` as string,
     };
   } catch {
     return null;
@@ -47,6 +46,7 @@ export function PersonalInfoSection({ className }: { className?: string }) {
   const { age } = useAgeCalculator(info?.birthDate ?? "");
 
   const [isLooking, setIsLooking] = useState(false);
+  const [lookupDone, setLookupDone] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
 
   if (!info) return null;
@@ -58,6 +58,7 @@ export function PersonalInfoSection({ className }: { className?: string }) {
     const formatted = formatPostalCode(raw);
     updatePersonalInfo({ postalCode: formatted });
     setLookupError(null);
+    setLookupDone(false);
 
     const digits = raw.replace(/-/g, "");
     if (digits.length === 7) {
@@ -65,7 +66,12 @@ export function PersonalInfoSection({ className }: { className?: string }) {
       const result = await lookupPostalCode(digits);
       setIsLooking(false);
       if (result) {
-        updatePersonalInfo({ address: result.address, addressKana: result.kana });
+        updatePersonalInfo({
+          prefecture: result.prefecture,
+          city: result.city,
+          addressKana: result.kana,
+        });
+        setLookupDone(true);
       } else {
         setLookupError("住所が見つかりませんでした");
       }
@@ -154,8 +160,9 @@ export function PersonalInfoSection({ className }: { className?: string }) {
 
       {/* 住所 */}
       <div className="space-y-4">
+        {/* 郵便番号 */}
         <FormField id="postalCode" label="郵便番号" required>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3 flex-wrap">
             <Input
               id="postalCode"
               value={info.postalCode}
@@ -166,13 +173,13 @@ export function PersonalInfoSection({ className }: { className?: string }) {
               className="max-w-36"
             />
             {isLooking && (
-              <span className="flex items-center gap-1 text-xs text-indigo-500">
+              <span className="flex items-center gap-1.5 text-xs text-indigo-500 font-medium">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                検索中...
+                住所を検索中...
               </span>
             )}
-            {!isLooking && info.address && !lookupError && (
-              <span className="flex items-center gap-1 text-xs text-emerald-600">
+            {lookupDone && !isLooking && (
+              <span className="flex items-center gap-1.5 text-xs text-emerald-600 font-medium">
                 <MapPin className="h-3.5 w-3.5" />
                 住所を自動入力しました
               </span>
@@ -181,44 +188,62 @@ export function PersonalInfoSection({ className }: { className?: string }) {
               <span className="text-xs text-red-500">{lookupError}</span>
             )}
           </div>
-          <p className="text-xs text-slate-400 mt-1">7桁入力で住所を自動入力</p>
+          <p className="text-xs text-slate-400 mt-1">7桁入力で都道府県・市区町村を自動入力</p>
         </FormField>
 
-        <FormField id="address" label="住所" required>
+        {/* 都道府県 + 市区町村 */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <FormField id="prefecture" label="都道府県" required>
+            <Input
+              id="prefecture"
+              value={info.prefecture}
+              onChange={(e) => field("prefecture")(e.target.value)}
+              placeholder="東京都"
+            />
+          </FormField>
+          <FormField id="city" label="市区町村" required>
+            <Input
+              id="city"
+              value={info.city}
+              onChange={(e) => field("city")(e.target.value)}
+              placeholder="渋谷区〇〇"
+            />
+          </FormField>
+        </div>
+
+        {/* 番地 */}
+        <FormField id="streetAddress" label="番地" required>
           <Input
-            id="address"
-            value={info.address}
-            onChange={(e) => field("address")(e.target.value)}
-            placeholder="東京都渋谷区〇〇 1-2-3"
-            autoComplete="street-address"
+            id="streetAddress"
+            value={info.streetAddress}
+            onChange={(e) => field("streetAddress")(e.target.value)}
+            placeholder="1-2-3"
           />
         </FormField>
 
+        {/* 建物名・部屋番号 */}
+        <FormField id="building" label="建物名・部屋番号">
+          <Input
+            id="building"
+            value={info.building}
+            onChange={(e) => field("building")(e.target.value)}
+            placeholder="〇〇マンション 101号室"
+          />
+        </FormField>
+
+        {/* 住所フリガナ */}
         <FormField id="addressKana" label="住所（フリガナ）">
           <Input
             id="addressKana"
             value={info.addressKana}
             onChange={(e) => field("addressKana")(e.target.value)}
-            placeholder="トウキョウトシブヤク〇〇 1-2-3"
+            placeholder="トウキョウトシブヤク〇〇"
           />
         </FormField>
       </div>
 
       {/* 連絡先 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <FormField id="phone" label="電話番号">
-          <Input
-            id="phone"
-            type="tel"
-            value={info.phone}
-            onChange={(e) =>
-              updatePersonalInfo({ phone: normalizePhone(e.target.value) })
-            }
-            placeholder="03-1234-5678"
-            autoComplete="tel"
-          />
-        </FormField>
-
         <FormField id="mobilePhone" label="携帯電話番号">
           <Input
             id="mobilePhone"
@@ -240,7 +265,6 @@ export function PersonalInfoSection({ className }: { className?: string }) {
             onChange={(e) => field("email")(e.target.value)}
             placeholder="taro.yamada@example.com"
             autoComplete="email"
-            className="col-span-full"
           />
         </FormField>
       </div>

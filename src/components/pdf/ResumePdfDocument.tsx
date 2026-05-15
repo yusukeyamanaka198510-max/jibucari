@@ -151,12 +151,8 @@ export function ResumePdfDocument({ resume }: Props) {
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>住所</Text>
                 <Text style={styles.infoValue}>
-                  〒{pi.postalCode}　{pi.address}
+                  〒{pi.postalCode}　{pi.prefecture}{pi.city}{pi.streetAddress}{pi.building ? `　${pi.building}` : ""}
                 </Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>電話</Text>
-                <Text style={styles.infoValue}>{pi.phone}</Text>
               </View>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>携帯</Text>

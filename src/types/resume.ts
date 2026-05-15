@@ -22,9 +22,11 @@ export interface PersonalInfo {
   birthDate: string;
   gender: Gender;
   postalCode: string;
-  address: string;
+  prefecture: string;
+  city: string;
+  streetAddress: string;
+  building: string;
   addressKana: string;
-  phone: string;
   mobilePhone: string;
   email: string;
   /** Supabase Storage URL or base64 data URL */

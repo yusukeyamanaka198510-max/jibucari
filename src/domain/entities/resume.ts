@@ -44,9 +44,11 @@ export function createEmptyPersonalInfo(): PersonalInfo {
     birthDate: "",
     gender: "prefer_not_to_say",
     postalCode: "",
-    address: "",
+    prefecture: "",
+    city: "",
+    streetAddress: "",
+    building: "",
     addressKana: "",
-    phone: "",
     mobilePhone: "",
     email: "",
   };
