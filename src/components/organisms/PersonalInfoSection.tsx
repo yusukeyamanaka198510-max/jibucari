@@ -15,6 +15,7 @@ import {
 import { cn } from "@/lib/utils";
 import { formatPostalCode, normalizePhone } from "@/lib/utils";
 import { Loader2, MapPin } from "lucide-react";
+import { BirthDatePicker } from "@/components/molecules/BirthDatePicker";
 import type { Gender } from "@/types";
 
 const GENDER_OPTIONS: { value: Gender; label: string }[] = [
@@ -130,12 +131,9 @@ export function PersonalInfoSection({ className }: { className?: string }) {
           required
           hint={info.birthDate ? `満 ${age} 歳` : undefined}
         >
-          <Input
-            id="birthDate"
-            type="date"
+          <BirthDatePicker
             value={info.birthDate}
-            onChange={(e) => field("birthDate")(e.target.value)}
-            max={new Date().toISOString().split("T")[0]}
+            onChange={(v) => updatePersonalInfo({ birthDate: v })}
           />
         </FormField>
 
