@@ -15,7 +15,7 @@ interface YearMonthSelectorProps {
   onMonthChange: (month: number) => void;
   /** 選択可能な最小年（デフォルト: 1950） */
   minYear?: number;
-  /** 選択可能な最大年（デフォルト: 今年+5） */
+  /** 選択可能な最大年（デフォルト: 今年） */
   maxYear?: number;
   className?: string;
   disabled?: boolean;
@@ -33,7 +33,7 @@ export function YearMonthSelector({
   onYearChange,
   onMonthChange,
   minYear = 1950,
-  maxYear = new Date().getFullYear() + 5,
+  maxYear = new Date().getFullYear(),
   className,
   disabled,
 }: YearMonthSelectorProps) {

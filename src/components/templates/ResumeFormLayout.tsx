@@ -227,14 +227,38 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
 }
 
 /* ── Step 6: 証明写真 ────────────────────────────────────────────── */
+async function detectFace(file: File): Promise<boolean> {
+  // ブラウザネイティブ FaceDetector API (Chrome/Edge のみ対応)
+  if (!("FaceDetector" in window)) return true; // 未対応ブラウザはスキップ
+  try {
+    const bitmap = await createImageBitmap(file);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const detector = new (window as any).FaceDetector({ fastMode: true });
+    const faces = await detector.detect(bitmap);
+    return faces.length > 0;
+  } catch {
+    return true; // 検出失敗時は通過させる
+  }
+}
+
 function PhotoStep() {
   const photoUrl = useResumeStore((s) => s.current?.personalInfo.photoUrl ?? "");
   const updatePersonalInfo = useResumeStore((s) => s.updatePersonalInfo);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [faceWarning, setFaceWarning] = useState(false);
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // 顔検出チェック
+    setFaceWarning(false);
+    const hasFace = await detectFace(file);
+    if (!hasFace) {
+      setFaceWarning(true);
+      // 警告は出すが選択はキャンセルしない（ユーザーが続行できるよう）
+    }
+
     const reader = new FileReader();
     reader.onload = (ev) => {
       updatePersonalInfo({ photoUrl: ev.target?.result as string });
@@ -247,6 +271,13 @@ function PhotoStep() {
       <p className="text-sm text-slate-500">
         縦4cm×横3cm程度の証明写真を推奨します。JPEG・PNG形式に対応しています。
       </p>
+
+      {faceWarning && (
+        <div className="rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-3 flex items-start gap-2">
+          <span className="text-lg leading-none">⚠️</span>
+          <span>顔が検出されませんでした。正面から撮影した証明写真をご使用ください。このまま続けることもできます。</span>
+        </div>
+      )}
 
       <div className="flex items-start gap-6">
         {/* プレビュー */}
@@ -333,28 +364,25 @@ function ReviewStep({
         <div className="text-5xl">🎉</div>
         <h3 className="text-xl font-black text-slate-900">入力完了！</h3>
         <p className="text-slate-500 text-sm">
-          内容を確認して、PDFをダウンロードしましょう。
+          内容を確認して、PDFを保存・送信しましょう。
         </p>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3 justify-center">
+      {/* プレビュー */}
+      <div className="flex justify-center">
         <Button variant="outline" onClick={onPreview} className="gap-2">
           <Eye className="h-4 w-4" />
           プレビューで確認
         </Button>
-        <Button onClick={onDownload} isLoading={isGenerating} className="gap-2">
-          <Download className="h-4 w-4" />
-          PDFをダウンロード
-        </Button>
       </div>
 
-      {/* 書類を送る */}
+      {/* 書類を保存・送る */}
       <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-3">
-        <p className="text-sm font-semibold text-slate-700">書類を送る</p>
+        <p className="text-sm font-semibold text-slate-700">書類を保存・送る</p>
         <div className="flex flex-col sm:flex-row gap-2">
           <Button onClick={onDownload} isLoading={isGenerating} variant="outline" className="gap-2 flex-1">
             <Download className="h-4 w-4" />
-            PDFダウンロード
+            PDFをダウンロード
           </Button>
           <Button onClick={handleEmailSend} isLoading={isGenerating} className="gap-2 flex-1">
             <Mail className="h-4 w-4" />
