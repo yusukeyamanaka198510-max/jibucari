@@ -54,7 +54,10 @@ export function PersonalInfoSection({ className }: { className?: string }) {
   const [lookupDone, setLookupDone] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
   // 郵便番号から取得したフリガナ（都道府県＋市区町村まで）
-  const [zipKana, setZipKana] = useState("");
+  // 既存の addressKana から数字前のカナ部分を初期値として使う
+  const [zipKana, setZipKana] = useState(
+    () => info?.addressKana.match(/^[^\d]*/)?.[0] ?? ""
+  );
   const isComposingBuildingRef = useRef(false);
 
   // IME composition でフリガナを自動取得
@@ -209,9 +212,8 @@ export function PersonalInfoSection({ className }: { className?: string }) {
             value={info.streetAddress}
             onChange={(e) => {
               const val = e.target.value;
-              const patch: Partial<typeof info> = { streetAddress: val };
-              if (zipKana) patch.addressKana = zipKana + val;
-              updatePersonalInfo(patch);
+              // zipKana + 新しい番地で住所フリガナを再構築（上書き）
+              updatePersonalInfo({ streetAddress: val, addressKana: zipKana + val });
             }}
             placeholder="1-2-3"
           />
@@ -221,29 +223,19 @@ export function PersonalInfoSection({ className }: { className?: string }) {
           <Input
             id="building"
             value={info.building}
-            onChange={(e) => {
-              const newVal = e.target.value;
-              const prevVal = info.building;
-              const patch: Partial<typeof info> = { building: newVal };
-              // IME入力中以外で数字・記号が追加された場合のみ住所フリガナへ反映
-              if (!isComposingBuildingRef.current && newVal.length > prevVal.length) {
-                const added = newVal.slice(prevVal.length);
-                const numPart = added.replace(/[ぁ-ゖァ-ヶー一-龯]/g, "");
-                if (numPart) patch.addressKana = info.addressKana + numPart;
-              }
-              updatePersonalInfo(patch);
-            }}
+            onChange={(e) => updatePersonalInfo({ building: e.target.value })}
             placeholder="〇〇マンション 101号室"
             onCompositionStart={() => { isComposingBuildingRef.current = true; }}
             onCompositionUpdate={(e) => { lastKanaRef.current = toKatakana(e.data); }}
             onCompositionEnd={() => {
               isComposingBuildingRef.current = false;
               if (lastKanaRef.current) {
-                updatePersonalInfo({ addressKana: (info.addressKana + lastKanaRef.current).trim() });
+                updatePersonalInfo({ addressKana: (info.addressKana + " " + lastKanaRef.current).trim() });
                 lastKanaRef.current = "";
               }
             }}
           />
+          <p className="text-xs text-slate-400 mt-1">建物名・部屋番号のフリガナは下の欄に直接追記できます</p>
         </FormField>
 
         <FormField id="addressKana" label="住所（フリガナ）">

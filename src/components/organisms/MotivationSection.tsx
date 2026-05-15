@@ -1,12 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Sparkles, Loader2, Mail, Download } from "lucide-react";
+import { Sparkles, Loader2 } from "lucide-react";
 import { useResumeStore } from "@/store/resumeStore";
 import { FormField } from "@/components/molecules/FormField";
 import { Textarea } from "@/components/atoms/Textarea";
-import { Button } from "@/components/atoms/Button";
-import { usePdfDownload } from "@/hooks/usePdfDownload";
 import { cn } from "@/lib/utils";
 
 const MAX_CHARS = 400;
@@ -31,14 +29,12 @@ export function MotivationSection({ className }: { className?: string }) {
   const hobbies = useResumeStore((s) => s.current?.hobbies ?? "");
   const info = useResumeStore((s) => s.current?.personalInfo);
   const workHistory = useResumeStore((s) => s.current?.workHistory ?? []);
-  const current = useResumeStore((s) => s.current);
   const setMotivation = useResumeStore((s) => s.setMotivation);
   const setSelfPR = useResumeStore((s) => s.setSelfPR);
   const setHobbies = useResumeStore((s) => s.setHobbies);
 
   const [genLoading, setGenLoading] = useState<"motivation" | "selfPR" | null>(null);
   const [genError, setGenError] = useState<string | null>(null);
-  const { download, isGenerating } = usePdfDownload(current);
 
   const name = info ? `${info.lastName}${info.firstName}` : "";
   const workSummary = workHistory.map((w) => `${w.company} ${w.position ?? ""}`).join("、") || "（職歴なし）";
@@ -55,16 +51,6 @@ export function MotivationSection({ className }: { className?: string }) {
     } finally {
       setGenLoading(null);
     }
-  };
-
-  const handleEmailSend = async () => {
-    // まずPDFをダウンロードして、その後メール起動
-    await download();
-    const subject = encodeURIComponent("履歴書のご送付");
-    const body = encodeURIComponent(
-      `${name} と申します。\n\nダウンロードした履歴書PDFを添付してお送りします。\n\nよろしくお願いいたします。`
-    );
-    window.open(`mailto:?subject=${subject}&body=${body}`);
   };
 
   return (
@@ -136,23 +122,6 @@ export function MotivationSection({ className }: { className?: string }) {
         />
       </FormField>
 
-      {/* PDF送信エリア */}
-      <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-3">
-        <p className="text-sm font-semibold text-slate-700">書類を送る</p>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Button onClick={download} isLoading={isGenerating} variant="outline" className="gap-2 flex-1">
-            <Download className="h-4 w-4" />
-            PDFダウンロード
-          </Button>
-          <Button onClick={handleEmailSend} isLoading={isGenerating} className="gap-2 flex-1">
-            <Mail className="h-4 w-4" />
-            メールで転送
-          </Button>
-        </div>
-        <p className="text-xs text-slate-400">
-          「メールで転送」はPDFをダウンロードしてメールアプリを起動します。PDFを添付してお使いください。
-        </p>
-      </div>
     </section>
   );
 }

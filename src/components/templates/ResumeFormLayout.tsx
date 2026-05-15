@@ -13,7 +13,7 @@ import { AutoSaveIndicator } from "@/components/molecules/AutoSaveIndicator";
 import { PdfPreviewModal } from "@/components/pdf/PdfPreviewModal";
 import { Button } from "@/components/atoms/Button";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Download, Eye, Check, Camera, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Eye, Check, Camera, Mail, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ResumeFormat } from "@/types";
 
@@ -315,16 +315,29 @@ function ReviewStep({
   onDownload: () => void;
   isGenerating: boolean;
 }) {
+  const info = useResumeStore((s) => s.current?.personalInfo);
+  const name = info ? `${info.lastName}${info.firstName}` : "";
+
+  const handleEmailSend = async () => {
+    await onDownload();
+    const subject = encodeURIComponent("履歴書のご送付");
+    const body = encodeURIComponent(
+      `${name} と申します。\n\nダウンロードした履歴書PDFを添付してお送りします。\n\nよろしくお願いいたします。`
+    );
+    window.open(`mailto:?subject=${subject}&body=${body}`);
+  };
+
   return (
-    <div className="space-y-6 text-center py-4">
-      <div className="text-5xl">🎉</div>
-      <div className="space-y-2">
+    <div className="space-y-6 py-4">
+      <div className="text-center space-y-2">
+        <div className="text-5xl">🎉</div>
         <h3 className="text-xl font-black text-slate-900">入力完了！</h3>
         <p className="text-slate-500 text-sm">
           内容を確認して、PDFをダウンロードしましょう。
         </p>
       </div>
-      <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+
+      <div className="flex flex-col sm:flex-row gap-3 justify-center">
         <Button variant="outline" onClick={onPreview} className="gap-2">
           <Eye className="h-4 w-4" />
           プレビューで確認
@@ -334,7 +347,26 @@ function ReviewStep({
           PDFをダウンロード
         </Button>
       </div>
-      <p className="text-xs text-slate-400">
+
+      {/* 書類を送る */}
+      <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-3">
+        <p className="text-sm font-semibold text-slate-700">書類を送る</p>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button onClick={onDownload} isLoading={isGenerating} variant="outline" className="gap-2 flex-1">
+            <Download className="h-4 w-4" />
+            PDFダウンロード
+          </Button>
+          <Button onClick={handleEmailSend} isLoading={isGenerating} className="gap-2 flex-1">
+            <Mail className="h-4 w-4" />
+            メールで転送
+          </Button>
+        </div>
+        <p className="text-xs text-slate-400">
+          「メールで転送」はPDFをダウンロードしてメールアプリを起動します。PDFを添付してお使いください。
+        </p>
+      </div>
+
+      <p className="text-xs text-slate-400 text-center">
         ダウンロード後も編集・再ダウンロードできます
       </p>
     </div>

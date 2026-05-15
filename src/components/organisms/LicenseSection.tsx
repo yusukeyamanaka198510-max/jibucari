@@ -1,6 +1,7 @@
 "use client";
 
-import { Trash2, PlusCircle } from "lucide-react";
+import { useState } from "react";
+import { Trash2, PlusCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { useResumeStore } from "@/store/resumeStore";
 import { FormField } from "@/components/molecules/FormField";
 import { YearMonthSelector } from "@/components/molecules/YearMonthSelector";
@@ -38,6 +39,11 @@ export function LicenseSection({ className }: { className?: string }) {
     (l) => !LICENSE_PRESETS.includes(l.name)
   );
 
+  const selectedPresetCount = LICENSE_PRESETS.filter((n) => getPresetEntry(n)).length;
+
+  // 選択済みがある場合は初期展開、なければ閉じておく
+  const [presetsOpen, setPresetsOpen] = useState(selectedPresetCount > 0);
+
   const togglePreset = (name: string) => {
     const existing = getPresetEntry(name);
     if (existing) {
@@ -56,11 +62,29 @@ export function LicenseSection({ className }: { className?: string }) {
       {/* ── 免許 ── */}
       <div className="space-y-3">
         <h3 className="text-sm font-semibold text-slate-700">免許</h3>
-        <p className="text-xs text-slate-400">
-          取得している免許にチェックを入れて取得年月を入力してください
-        </p>
+        {/* アコーディオントグル */}
+        <button
+          type="button"
+          onClick={() => setPresetsOpen((v) => !v)}
+          className="w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 border-slate-200 bg-white hover:border-indigo-300 transition-colors text-sm font-medium text-slate-700"
+        >
+          <span>
+            免許を選択
+            {selectedPresetCount > 0 && (
+              <span className="ml-2 text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                {selectedPresetCount}件選択中
+              </span>
+            )}
+          </span>
+          {presetsOpen
+            ? <ChevronUp className="h-4 w-4 text-slate-400" />
+            : <ChevronDown className="h-4 w-4 text-slate-400" />
+          }
+        </button>
 
-        <div className="space-y-2">
+        {presetsOpen && (
+        <div className="space-y-2 border-2 border-slate-100 rounded-xl p-3">
+          <p className="text-xs text-slate-400 mb-2">取得している免許にチェックを入れて取得年月を入力してください</p>
           {LICENSE_PRESETS.map((name) => {
             const entry = getPresetEntry(name);
             const checked = !!entry;
@@ -95,6 +119,7 @@ export function LicenseSection({ className }: { className?: string }) {
             );
           })}
         </div>
+        )}
 
         {/* その他（カスタム）免許 */}
         {customEntries.map((entry) => (
