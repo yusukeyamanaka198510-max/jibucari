@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useResumeStore } from "@/store/resumeStore";
 import { useAgeCalculator } from "@/hooks/useAgeCalculator";
 import { FormField } from "@/components/molecules/FormField";
@@ -13,6 +14,7 @@ import {
 } from "@/components/atoms/Select";
 import { cn } from "@/lib/utils";
 import { formatPostalCode, normalizePhone } from "@/lib/utils";
+import { Loader2, MapPin } from "lucide-react";
 import type { Gender } from "@/types";
 
 const GENDER_OPTIONS: { value: Gender; label: string }[] = [
@@ -22,30 +24,57 @@ const GENDER_OPTIONS: { value: Gender; label: string }[] = [
   { value: "prefer_not_to_say", label: "回答しない" },
 ];
 
-/**
- * 基本情報入力セクション Organism。
- * Zustand ストアに直接書き込む設計（ローカル state 不要）。
- */
+async function lookupPostalCode(code: string): Promise<{ address: string; kana: string } | null> {
+  const digits = code.replace(/-/g, "");
+  if (digits.length !== 7) return null;
+  try {
+    const res = await fetch(`https://zipcloud.ibsnet.co.jp/api/search?zipcode=${digits}`);
+    const json = await res.json();
+    if (json.status !== 200 || !json.results) return null;
+    const r = json.results[0];
+    return {
+      address: `${r.address1}${r.address2}${r.address3}`,
+      kana: `${r.kana1}${r.kana2}${r.kana3}`,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function PersonalInfoSection({ className }: { className?: string }) {
   const info = useResumeStore((s) => s.current?.personalInfo);
   const updatePersonalInfo = useResumeStore((s) => s.updatePersonalInfo);
-
   const { age } = useAgeCalculator(info?.birthDate ?? "");
+
+  const [isLooking, setIsLooking] = useState(false);
+  const [lookupError, setLookupError] = useState<string | null>(null);
 
   if (!info) return null;
 
   const field = (key: keyof typeof info) =>
     (value: string) => updatePersonalInfo({ [key]: value });
 
+  const handlePostalCode = async (raw: string) => {
+    const formatted = formatPostalCode(raw);
+    updatePersonalInfo({ postalCode: formatted });
+    setLookupError(null);
+
+    const digits = raw.replace(/-/g, "");
+    if (digits.length === 7) {
+      setIsLooking(true);
+      const result = await lookupPostalCode(digits);
+      setIsLooking(false);
+      if (result) {
+        updatePersonalInfo({ address: result.address, addressKana: result.kana });
+      } else {
+        setLookupError("住所が見つかりませんでした");
+      }
+    }
+  };
+
   return (
-    <section
-      className={cn("space-y-6", className)}
-      aria-labelledby="personal-info-heading"
-    >
-      <h2
-        id="personal-info-heading"
-        className="text-lg font-semibold border-b pb-2"
-      >
+    <section className={cn("space-y-6", className)} aria-labelledby="personal-info-heading">
+      <h2 id="personal-info-heading" className="text-lg font-semibold border-b pb-2">
         基本情報
       </h2>
 
@@ -125,23 +154,34 @@ export function PersonalInfoSection({ className }: { className?: string }) {
 
       {/* 住所 */}
       <div className="space-y-4">
-        <FormField
-          id="postalCode"
-          label="郵便番号"
-          required
-          hint="ハイフンなしで入力してください"
-        >
-          <Input
-            id="postalCode"
-            value={info.postalCode}
-            onChange={(e) =>
-              updatePersonalInfo({ postalCode: formatPostalCode(e.target.value) })
-            }
-            placeholder="123-4567"
-            maxLength={8}
-            autoComplete="postal-code"
-            className="max-w-36"
-          />
+        <FormField id="postalCode" label="郵便番号" required>
+          <div className="flex items-center gap-2">
+            <Input
+              id="postalCode"
+              value={info.postalCode}
+              onChange={(e) => handlePostalCode(e.target.value)}
+              placeholder="123-4567"
+              maxLength={8}
+              autoComplete="postal-code"
+              className="max-w-36"
+            />
+            {isLooking && (
+              <span className="flex items-center gap-1 text-xs text-indigo-500">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                検索中...
+              </span>
+            )}
+            {!isLooking && info.address && !lookupError && (
+              <span className="flex items-center gap-1 text-xs text-emerald-600">
+                <MapPin className="h-3.5 w-3.5" />
+                住所を自動入力しました
+              </span>
+            )}
+            {lookupError && (
+              <span className="text-xs text-red-500">{lookupError}</span>
+            )}
+          </div>
+          <p className="text-xs text-slate-400 mt-1">7桁入力で住所を自動入力</p>
         </FormField>
 
         <FormField id="address" label="住所" required>
