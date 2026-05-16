@@ -511,7 +511,7 @@ function ReviewStep({
       <div className="rounded-xl border-2 border-indigo-200 bg-indigo-50/40 p-4 space-y-3">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <p className="text-sm font-bold text-indigo-800">ジブキャリスタッフに面談依頼</p>
+            <p className="text-sm font-bold text-indigo-800">ジブキャリスタッフに無料面談依頼</p>
             <p className="text-xs text-indigo-600 mt-0.5">
               就活・転職のプロが無料で相談に乗ります
             </p>
@@ -549,6 +549,7 @@ function ReviewStep({
             </div>
 
             {/* 希望日 */}
+            <p className="text-xs text-slate-400">初回面談は30分〜1時間程度を予定しています。</p>
             <div className="space-y-2">
               {[
                 { label: "第一希望日", val: date1, set: setDate1, required: true },
