@@ -92,7 +92,8 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
         return;
       }
     }
-    if (!current) initNew(format);
+    // 新規作成時は常に指定フォーマットで初期化（前回の残留データを上書き）
+    initNew(format);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
