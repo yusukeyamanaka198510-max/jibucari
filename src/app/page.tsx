@@ -14,44 +14,67 @@ const DOC_TYPES = [
     href: "/resume/new",
     emoji: "📄",
     label: "履歴書",
-    sub: "転職用 / 新卒用 / バイト用 / JIS規格",
+    sub: "転職・新卒・バイト・JIS規格の5テンプレートから選択",
+    badge: "最もよく使われる",
     color: "from-indigo-500 to-violet-500",
     bg: "bg-indigo-50",
-    border: "border-indigo-100",
+    border: "border-indigo-200",
+    badgeColor: "bg-indigo-600",
   },
   {
     href: "/cv/new",
     emoji: "💼",
     label: "職務経歴書",
-    sub: "職歴・スキルを詳しくまとめる",
+    sub: "経歴・スキルを詳しくまとめてPDFに出力",
+    badge: "転職活動に必須",
     color: "from-violet-500 to-purple-500",
     bg: "bg-violet-50",
-    border: "border-violet-100",
+    border: "border-violet-200",
+    badgeColor: "bg-violet-600",
   },
   {
     href: "/cover-letter/new",
     emoji: "✉️",
     label: "送付状・退職届",
-    sub: "応募書類の送付 / 退職手続き",
+    sub: "応募書類の送付状と退職届をかんたん作成",
+    badge: "",
     color: "from-sky-500 to-indigo-500",
     bg: "bg-sky-50",
-    border: "border-sky-100",
+    border: "border-sky-200",
+    badgeColor: "bg-sky-600",
   },
   {
     href: "/skill-sheet/new",
     emoji: "⚡",
     label: "スキルシート",
-    sub: "技術スキル・案件経歴を一覧化",
+    sub: "技術スキル・プロジェクト経歴を表形式で整理",
+    badge: "ITエンジニア向け",
     color: "from-emerald-500 to-teal-500",
     bg: "bg-emerald-50",
-    border: "border-emerald-100",
+    border: "border-emerald-200",
+    badgeColor: "bg-emerald-600",
   },
 ];
 
 const STEPS = [
-  { n: "01", icon: "🖊️", title: "書類を選ぶ", body: "履歴書・職務経歴書など、作りたい書類をワンタップで選択。" },
-  { n: "02", icon: "✍️", title: "フォームに入力", body: "ガイドに沿って入力するだけ。学歴・職歴は自動計算。AIが文章を代わりに書いてくれる。" },
-  { n: "03", icon: "📥", title: "PDFでダウンロード", body: "ワンクリックでレイアウト崩れゼロのPDFを即ダウンロード。メール送付も可能。" },
+  {
+    n: "01", icon: "📋",
+    title: "書類の種類を選ぶ",
+    body: "履歴書・職務経歴書・スキルシートなど必要な書類をタップするだけ。転職・新卒・バイト用テンプレートも揃っています。",
+    hint: "5種類のフォーマットから選択",
+  },
+  {
+    n: "02", icon: "✏️",
+    title: "フォームに答える",
+    body: "名前・住所・経歴を入力するだけ。AIが志望動機・自己PRを自動生成。学歴・職歴の計算も不要です。",
+    hint: "AIが文章を自動生成",
+  },
+  {
+    n: "03", icon: "📥",
+    title: "PDFをダウンロード",
+    body: "ボタン1つでA4対応のPDFが即完成。レイアウト崩れゼロ。そのままメールで企業に送付することも可能です。",
+    hint: "印刷してそのまま提出OK",
+  },
 ];
 
 const FEATURES = [
@@ -179,27 +202,40 @@ export default function HomePage() {
       </section>
 
       {/* ── 使い方 3ステップ ────────────────────────────── */}
-      <section id="how" className="py-12 px-5 bg-white">
+      <section id="how" className="py-14 px-5 bg-white">
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-8 space-y-1">
+          <div className="text-center mb-10 space-y-2">
             <p className="text-indigo-600 font-semibold text-sm tracking-widest uppercase">How it works</p>
-            <h2 className="text-2xl font-black">たった3ステップで完成</h2>
-            <p className="text-slate-500 text-sm">難しい操作は一切なし。フォームに答えるだけ。</p>
+            <h2 className="text-3xl font-black">たった3ステップで完成</h2>
+            <p className="text-slate-500 text-base">難しい操作は一切なし。フォームに答えるだけ。</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             {STEPS.map((s, i) => (
-              <div key={s.n} className="relative bg-slate-50 rounded-2xl p-5 space-y-2 border border-slate-100">
+              <div key={s.n} className="relative bg-white rounded-3xl p-6 border-2 border-slate-100 hover:border-indigo-100 hover:shadow-lg transition-all duration-200 overflow-hidden">
+                {/* コネクター矢印 */}
                 {i < STEPS.length - 1 && (
-                  <div className="hidden sm:block absolute top-10 -right-3 text-slate-300 text-xl z-10">→</div>
+                  <div className="hidden sm:flex absolute top-1/2 -right-4 -translate-y-1/2 z-10 w-8 h-8 items-center justify-center rounded-full bg-indigo-100 text-indigo-500 text-sm font-bold shadow-sm">
+                    →
+                  </div>
                 )}
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl font-black bg-gradient-to-r from-indigo-600 to-violet-500 bg-clip-text text-transparent">
-                    {s.n}
-                  </span>
-                  <span className="text-xl">{s.icon}</span>
+                {/* 背景の大きな数字 */}
+                <div className="absolute -top-3 -right-1 text-[7.5rem] font-black leading-none text-slate-50 select-none pointer-events-none">
+                  {s.n}
                 </div>
-                <p className="font-bold text-base">{s.title}</p>
-                <p className="text-sm text-slate-500 leading-relaxed">{s.body}</p>
+                {/* アイコン円 */}
+                <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-50 to-violet-50 border border-indigo-100 flex items-center justify-center text-3xl mb-5 shadow-sm">
+                  {s.icon}
+                </div>
+                {/* ステップ番号 */}
+                <p className="text-xs font-bold text-indigo-500 tracking-widest uppercase mb-1.5">Step {s.n}</p>
+                {/* タイトル */}
+                <p className="font-black text-xl text-slate-900 mb-2.5">{s.title}</p>
+                {/* 説明文 */}
+                <p className="text-sm text-slate-500 leading-relaxed mb-4">{s.body}</p>
+                {/* ヒントバッジ */}
+                <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-100 px-3 py-1.5 rounded-full">
+                  <span className="text-emerald-500">✓</span> {s.hint}
+                </div>
               </div>
             ))}
           </div>
@@ -214,17 +250,32 @@ export default function HomePage() {
             <h2 className="text-2xl font-black">作れる書類</h2>
             <p className="text-slate-500 text-sm">就活・転職・バイトに必要な書類をすべてカバー。</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {DOC_TYPES.map((d) => (
               <Link key={d.href} href={d.href}>
-                <div className={`group relative overflow-hidden rounded-2xl ${d.bg} border ${d.border} p-4 flex items-center gap-4 transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer`}>
-                  <div className={`absolute inset-y-0 left-0 w-1.5 rounded-l-2xl bg-gradient-to-b ${d.color}`} />
-                  <span className="text-3xl">{d.emoji}</span>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-bold text-base text-slate-900">{d.label}</p>
-                    <p className="text-sm truncate text-slate-500">{d.sub}</p>
+                <div className={`group relative overflow-hidden rounded-2xl ${d.bg} border-2 ${d.border} p-5 flex items-center gap-5 min-h-[130px] transition-all duration-200 hover:shadow-xl hover:scale-[1.02] hover:-translate-y-0.5 cursor-pointer`}>
+                  {/* 左グラデーションバー */}
+                  <div className={`absolute inset-y-0 left-0 w-2 rounded-l-2xl bg-gradient-to-b ${d.color}`} />
+                  {/* 絵文字ボックス */}
+                  <div className="flex-shrink-0 w-16 h-16 rounded-2xl bg-white shadow-sm border border-white flex items-center justify-center text-4xl">
+                    {d.emoji}
                   </div>
-                  <span className="text-slate-300 group-hover:text-indigo-400 transition-colors text-xl flex-shrink-0">→</span>
+                  {/* テキスト */}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="font-black text-lg text-slate-900">{d.label}</p>
+                      {d.badge && (
+                        <span className={`${d.badgeColor} text-white text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap`}>
+                          {d.badge}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-slate-500 leading-snug">{d.sub}</p>
+                  </div>
+                  {/* 矢印ボタン */}
+                  <div className={`flex-shrink-0 w-9 h-9 rounded-full bg-gradient-to-br ${d.color} flex items-center justify-center text-white text-sm font-bold shadow-md opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-all duration-200`}>
+                    →
+                  </div>
                 </div>
               </Link>
             ))}
