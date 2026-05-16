@@ -72,7 +72,7 @@ export function CoverLetterFormLayout() {
   }
 
   const STEPS = buildSteps(current.type);
-  const lastStep = STEPS[STEPS.length - 1].id;
+  const lastStep = STEPS[STEPS.length - 1]?.id ?? STEPS.length;
   const progress = Math.round(((step - 1) / (STEPS.length - 1)) * 100);
 
   return (

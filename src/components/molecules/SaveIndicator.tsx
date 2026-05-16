@@ -1,9 +1,10 @@
+import type { LucideIcon } from "lucide-react";
 import { CheckCircle, AlertCircle, Loader2, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
-const CONFIG: Record<SaveStatus, { icon: React.ElementType; label: string; cls: string }> = {
+const CONFIG: Record<SaveStatus, { icon: LucideIcon; label: string; cls: string }> = {
   idle:   { icon: Clock,       label: "未保存",    cls: "text-slate-400" },
   saving: { icon: Loader2,     label: "保存中...", cls: "text-slate-400" },
   saved:  { icon: CheckCircle, label: "保存済み",  cls: "text-green-600" },
