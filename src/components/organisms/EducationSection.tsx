@@ -10,7 +10,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/atoms/Select";
 import { cn } from "@/lib/utils";
-import type { EducationEntryType, EducationExitType } from "@/types";
+import type { EducationEntryType, EducationExitType, ResumeFormat } from "@/types";
 
 const ENTRY_OPTIONS: { value: EducationEntryType; label: string }[] = [
   { value: "enrolled",       label: "入学" },
@@ -22,7 +22,13 @@ const EXIT_OPTIONS: { value: EducationExitType; label: string }[] = [
   { value: "dropped_out", label: "中退" },
 ];
 
-export function EducationSection({ className }: { className?: string }) {
+const FORMAT_EDU_HINTS: Partial<Record<ResumeFormat, string>> = {
+  career_change: "最終学歴を中心に記載してください。古い学歴は省略しても構いません。",
+  new_graduate:  "小学校・中学校・高校・大学まで記載してください。部活やゼミ活動は後のステップで入力できます。",
+  part_time:     "在学中の方は「卒業見込み」として記載してください。",
+};
+
+export function EducationSection({ className, format = "jis" }: { className?: string; format?: ResumeFormat }) {
   const education        = useResumeStore((s) => s.current?.education ?? []);
   const birthDate        = useResumeStore((s) => s.current?.personalInfo.birthDate ?? "");
   const addEducation     = useResumeStore((s) => s.addEducation);
@@ -53,9 +59,17 @@ export function EducationSection({ className }: { className?: string }) {
     }
   };
 
+  const hint = FORMAT_EDU_HINTS[format];
+
   return (
     <section className={cn("space-y-4", className)} aria-labelledby="education-heading">
       <h2 id="education-heading" className="text-lg font-semibold border-b pb-2">学歴</h2>
+
+      {hint && (
+        <p className="text-sm text-indigo-700 bg-indigo-50 rounded-xl px-4 py-2.5 border border-indigo-100">
+          {hint}
+        </p>
+      )}
 
       <ol className="space-y-4">
         {education.map((entry, index) => (

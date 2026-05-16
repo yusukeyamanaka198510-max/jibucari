@@ -44,6 +44,8 @@ interface ResumeActions {
   setMotivation: (value: string) => void;
   setSelfPR: (value: string) => void;
   setHobbies: (value: string) => void;
+  setCommute: (value: string) => void;
+  setDesiredSalary: (value: string) => void;
 
   saveCurrentToList: () => void;
   setAutoSaveStatus: (status: ResumeState["autoSaveStatus"]) => void;
@@ -143,6 +145,12 @@ export const useResumeStore = create<ResumeStore>()(
 
         setHobbies: (value) =>
           set((s) => { if (s.current) s.current.hobbies = value; }),
+
+        setCommute: (value) =>
+          set((s) => { if (s.current) s.current.commute = value; }),
+
+        setDesiredSalary: (value) =>
+          set((s) => { if (s.current) s.current.desiredSalary = value; }),
 
         saveCurrentToList: () =>
           set((s) => {

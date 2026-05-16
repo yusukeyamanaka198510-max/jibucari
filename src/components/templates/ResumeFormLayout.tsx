@@ -17,7 +17,7 @@ import { Button } from "@/components/atoms/Button";
 import Link from "next/link";
 import {
   ChevronLeft, ChevronRight, Download, Eye, Check,
-  Camera, Mail, Trash2, CalendarDays, X, CheckCircle2,
+  Camera, Mail, Trash2, CalendarDays, X, CheckCircle2, Train, Banknote,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ResumeFormat } from "@/types";
@@ -35,15 +35,40 @@ const FORMAT_LABELS: Record<ResumeFormat, string> = {
   no_photo: "写真なし履歴書",
 };
 
-const STEPS = [
-  { id: 1, label: "基本情報",     short: "基本" },
-  { id: 2, label: "学歴",         short: "学歴" },
-  { id: 3, label: "職歴",         short: "職歴" },
-  { id: 4, label: "免許・資格",   short: "資格" },
-  { id: 5, label: "志望動機・PR", short: "PR"   },
-  { id: 6, label: "証明写真",     short: "写真" },
-  { id: 7, label: "確認・DL",     short: "確認" },
-];
+type StepDef = { id: number; label: string; short: string };
+
+function buildSteps(format: ResumeFormat): StepDef[] {
+  const base: StepDef[] = [
+    { id: 1, label: "基本情報", short: "基本" },
+    { id: 2, label: "学歴",     short: "学歴" },
+  ];
+
+  // Step 3: 職歴ラベルをフォーマットで変える
+  const workLabel = format === "part_time" ? "アルバイト歴" : format === "new_graduate" ? "インターン・バイト" : "職歴";
+  base.push({ id: 3, label: workLabel, short: "職歴" });
+
+  base.push({ id: 4, label: "免許・資格", short: "資格" });
+
+  // Step 5: PRラベル
+  const prLabel =
+    format === "career_change" ? "転職理由・志望動機" :
+    format === "new_graduate"  ? "自己PR・学生時代" :
+    format === "part_time"     ? "志望動機・PR" :
+    "志望動機・PR";
+  base.push({ id: 5, label: prLabel, short: "PR" });
+
+  // Step 6: フォーマット依存
+  if (format === "no_photo") {
+    // 写真なし → Step 6 をスキップ、そのまま確認へ
+  } else if (format === "part_time") {
+    base.push({ id: 6, label: "希望勤務条件", short: "勤務" });
+  } else {
+    base.push({ id: 6, label: "証明写真", short: "写真" });
+  }
+
+  base.push({ id: base.length + 1, label: "確認・DL", short: "確認" });
+  return base;
+}
 
 export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutProps) {
   const initNew = useResumeStore((s) => s.initNew);
@@ -55,6 +80,9 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
   const [emailSent, setEmailSent]   = useState(false);
 
   const { download, isGenerating } = usePdfDownload(current);
+  const activeFormat = (current?.format ?? format) as ResumeFormat;
+  const STEPS = buildSteps(activeFormat);
+  const lastStep = STEPS[STEPS.length - 1]?.id ?? STEPS.length;
 
   useEffect(() => {
     if (resumeId) {
@@ -214,12 +242,13 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
 
             <div className="space-y-6">
               {step === 1 && <PersonalInfoSection />}
-              {step === 2 && <EducationSection />}
-              {step === 3 && <WorkHistorySection />}
+              {step === 2 && <EducationSection format={activeFormat} />}
+              {step === 3 && <WorkHistorySection format={activeFormat} />}
               {step === 4 && <LicenseSection />}
-              {step === 5 && <MotivationSection />}
-              {step === 6 && <PhotoStep />}
-              {step === 7 && (
+              {step === 5 && <MotivationSection format={activeFormat} />}
+              {step === 6 && activeFormat === "part_time" && <ShiftSection />}
+              {step === 6 && activeFormat !== "part_time" && activeFormat !== "no_photo" && <PhotoStep />}
+              {step === lastStep && (
                 <ReviewStep
                   onPreview={() => setIsPreviewing(true)}
                   onDownload={download}
@@ -270,6 +299,75 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
         onClose={() => setIsPreviewing(false)}
       />
     </>
+  );
+}
+
+/* ── Step 6 (part_time): 希望勤務条件 ───────────────────────────────── */
+function ShiftSection() {
+  const commute       = useResumeStore((s) => s.current?.commute ?? "");
+  const desiredSalary = useResumeStore((s) => s.current?.desiredSalary ?? "");
+  const setCommute       = useResumeStore((s) => s.setCommute);
+  const setDesiredSalary = useResumeStore((s) => s.setDesiredSalary);
+
+  const COMMUTE_OPTIONS = ["徒歩", "自転車", "バイク", "自動車", "電車", "バス", "その他"];
+
+  return (
+    <div className="space-y-6">
+      <p className="text-sm text-slate-500">
+        勤務条件の希望を記載してください。採用担当者がシフト調整の参考にします。
+      </p>
+
+      {/* 通勤手段・時間 */}
+      <div className="space-y-3">
+        <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+          <Train className="h-4 w-4 text-emerald-500" />
+          通勤手段・通勤時間
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {COMMUTE_OPTIONS.map((opt) => (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => setCommute(commute === opt ? "" : opt)}
+              className={cn(
+                "px-3 py-1.5 rounded-full text-sm font-medium border-2 transition-all",
+                commute === opt
+                  ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                  : "border-slate-200 text-slate-500 hover:border-slate-300"
+              )}
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
+        <input
+          type="text"
+          value={commute}
+          onChange={(e) => setCommute(e.target.value)}
+          placeholder="例：自転車（15分）、電車（30分・乗換1回）"
+          className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+        />
+      </div>
+
+      {/* 希望時給・給与 */}
+      <div className="space-y-2">
+        <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+          <Banknote className="h-4 w-4 text-emerald-500" />
+          希望時給・給与
+        </label>
+        <input
+          type="text"
+          value={desiredSalary}
+          onChange={(e) => setDesiredSalary(e.target.value)}
+          placeholder="例：時給1,100円以上、もしくは応相談"
+          className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+        />
+      </div>
+
+      <p className="text-xs text-slate-400">
+        ※ 希望シフトは前のステップ「志望動機・PR」内の「希望シフト・勤務可能日」欄にも記載できます。
+      </p>
+    </div>
   );
 }
 

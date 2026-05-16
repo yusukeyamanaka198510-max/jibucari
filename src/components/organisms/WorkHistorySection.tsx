@@ -8,6 +8,7 @@ import { YearMonthSelector } from "@/components/molecules/YearMonthSelector";
 import { Input } from "@/components/atoms/Input";
 import { Textarea } from "@/components/atoms/Textarea";
 import { cn } from "@/lib/utils";
+import type { ResumeFormat } from "@/types";
 
 const POSITION_CANDIDATES = [
   "営業", "内勤営業", "法人営業", "個人営業", "販売・接客", "店長",
@@ -23,19 +24,35 @@ const POSITION_CANDIDATES = [
   "主任", "係長", "課長", "部長", "マネージャー", "チームリーダー", "役員",
 ];
 
-export function WorkHistorySection({ className }: { className?: string }) {
+const FORMAT_WORK_CONFIG: Record<ResumeFormat, { heading: string; noWorkLabel: string; addLabel: string; indexPrefix: string; hint?: string }> = {
+  jis:           { heading: "職歴",               noWorkLabel: "職歴なし（新卒など）",         addLabel: "職歴を追加",           indexPrefix: "職歴" },
+  career_change: { heading: "職歴",               noWorkLabel: "職歴なし",                     addLabel: "職歴を追加",           indexPrefix: "職歴", hint: "転職活動では職歴が重視されます。担当業務・実績をできるだけ詳しく記載しましょう。" },
+  new_graduate:  { heading: "アルバイト・インターン経験", noWorkLabel: "経験なし",             addLabel: "経験を追加",           indexPrefix: "経験", hint: "アルバイトやインターンの経験があれば記載してください。なければ「経験なし」を選択してください。" },
+  part_time:     { heading: "アルバイト・パート歴", noWorkLabel: "アルバイト経験なし",         addLabel: "アルバイト歴を追加",   indexPrefix: "経験", hint: "過去のアルバイト・パート経験を記載してください。接客・販売経験などがあればアピールになります。" },
+  no_photo:      { heading: "職歴",               noWorkLabel: "職歴なし（新卒など）",         addLabel: "職歴を追加",           indexPrefix: "職歴" },
+};
+
+export function WorkHistorySection({ className, format = "jis" }: { className?: string; format?: ResumeFormat }) {
   const workHistory = useResumeStore((s) => s.current?.workHistory ?? []);
   const addWork = useResumeStore((s) => s.addWork);
   const updateWork = useResumeStore((s) => s.updateWork);
   const removeWork = useResumeStore((s) => s.removeWork);
 
-  const [noWork, setNoWork] = useState(false);
+  const cfg = FORMAT_WORK_CONFIG[format];
+  const defaultNoWork = format === "new_graduate";
+  const [noWork, setNoWork] = useState(defaultNoWork);
 
   return (
     <section className={cn("space-y-4", className)} aria-labelledby="work-history-heading">
-      <h2 id="work-history-heading" className="text-lg font-semibold border-b pb-2">職歴</h2>
+      <h2 id="work-history-heading" className="text-lg font-semibold border-b pb-2">{cfg.heading}</h2>
 
-      {/* 職歴あり / なし 切り替え */}
+      {cfg.hint && (
+        <p className="text-sm text-indigo-700 bg-indigo-50 rounded-xl px-4 py-2.5 border border-indigo-100">
+          {cfg.hint}
+        </p>
+      )}
+
+      {/* あり / なし 切り替え */}
       <div className="flex gap-2">
         <button
           onClick={() => setNoWork(false)}
@@ -47,7 +64,7 @@ export function WorkHistorySection({ className }: { className?: string }) {
           )}
         >
           <BriefcaseBusiness className="h-4 w-4 inline mr-1.5" />
-          職歴あり
+          {cfg.heading}あり
         </button>
         <button
           onClick={() => setNoWork(true)}
@@ -59,13 +76,13 @@ export function WorkHistorySection({ className }: { className?: string }) {
           )}
         >
           <X className="h-4 w-4 inline mr-1.5" />
-          職歴なし（新卒など）
+          {cfg.noWorkLabel}
         </button>
       </div>
 
       {noWork ? (
         <div className="rounded-xl border-2 border-dashed border-slate-200 py-8 text-center text-slate-400 text-sm">
-          職歴なしとして記載されます
+          {cfg.noWorkLabel}として記載されます
         </div>
       ) : (
         <>
@@ -74,7 +91,7 @@ export function WorkHistorySection({ className }: { className?: string }) {
               <li key={entry.id} className="rounded-xl border border-slate-200 p-4 space-y-3 bg-slate-50/50">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-indigo-600 uppercase tracking-wide">
-                    職歴 {index + 1}
+                    {cfg.indexPrefix} {index + 1}
                   </span>
                   <button
                     onClick={() => removeWork(entry.id)}
@@ -179,7 +196,7 @@ export function WorkHistorySection({ className }: { className?: string }) {
             className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-slate-200 text-slate-400 hover:border-indigo-300 hover:text-indigo-500 transition-colors text-sm font-medium"
           >
             <PlusCircle className="h-4 w-4" />
-            職歴を追加
+            {cfg.addLabel}
           </button>
         </>
       )}
