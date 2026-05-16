@@ -20,34 +20,31 @@ const DOC_TYPES = [
     border: "border-indigo-100",
   },
   {
-    href: "#",
+    href: "/cv/new",
     emoji: "💼",
     label: "職務経歴書",
-    sub: "近日公開",
+    sub: "職歴・スキルを詳しくまとめる",
     color: "from-violet-500 to-purple-500",
     bg: "bg-violet-50",
     border: "border-violet-100",
-    disabled: true,
   },
   {
-    href: "#",
+    href: "/cover-letter/new",
     emoji: "✉️",
     label: "送付状・退職届",
-    sub: "近日公開",
+    sub: "応募書類の送付 / 退職手続き",
     color: "from-sky-500 to-indigo-500",
     bg: "bg-sky-50",
     border: "border-sky-100",
-    disabled: true,
   },
   {
-    href: "#",
+    href: "/skill-sheet/new",
     emoji: "⚡",
     label: "スキルシート",
-    sub: "近日公開",
+    sub: "技術スキル・案件経歴を一覧化",
     color: "from-emerald-500 to-teal-500",
     bg: "bg-emerald-50",
     border: "border-emerald-100",
-    disabled: true,
   },
 ];
 
@@ -218,26 +215,19 @@ export default function HomePage() {
             <p className="text-slate-500 text-sm">就活・転職・バイトに必要な書類をすべてカバー。</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {DOC_TYPES.map((d) => {
-              const inner = (
-                <div className={`group relative overflow-hidden rounded-2xl ${d.bg} border ${d.border} p-4 flex items-center gap-4 transition-all duration-200 ${d.disabled ? "opacity-50 cursor-not-allowed" : "hover:shadow-xl hover:-translate-y-1 cursor-pointer"}`}>
+            {DOC_TYPES.map((d) => (
+              <Link key={d.href} href={d.href}>
+                <div className={`group relative overflow-hidden rounded-2xl ${d.bg} border ${d.border} p-4 flex items-center gap-4 transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer`}>
                   <div className={`absolute inset-y-0 left-0 w-1.5 rounded-l-2xl bg-gradient-to-b ${d.color}`} />
                   <span className="text-3xl">{d.emoji}</span>
                   <div className="min-w-0 flex-1">
                     <p className="font-bold text-base text-slate-900">{d.label}</p>
-                    <p className={`text-sm truncate ${d.disabled ? "text-amber-500 font-medium" : "text-slate-500"}`}>{d.sub}</p>
+                    <p className="text-sm truncate text-slate-500">{d.sub}</p>
                   </div>
-                  {!d.disabled && (
-                    <span className="text-slate-300 group-hover:text-indigo-400 transition-colors text-xl flex-shrink-0">→</span>
-                  )}
+                  <span className="text-slate-300 group-hover:text-indigo-400 transition-colors text-xl flex-shrink-0">→</span>
                 </div>
-              );
-              return d.disabled ? (
-                <div key={d.label}>{inner}</div>
-              ) : (
-                <Link key={d.href} href={d.href}>{inner}</Link>
-              );
-            })}
+              </Link>
+            ))}
           </div>
         </div>
       </section>
