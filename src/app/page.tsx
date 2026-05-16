@@ -164,7 +164,7 @@ export default function HomePage() {
                   width={420}
                   height={420}
                   className="relative w-[220px] sm:w-[300px] lg:w-[400px] xl:w-[440px] object-contain"
-                  style={{ mixBlendMode: "lighten" }}
+
                   priority
                 />
               </div>
