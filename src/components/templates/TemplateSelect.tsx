@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { ChevronLeft, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { OwlCharacter } from "@/components/atoms/OwlCharacter";
 
 /* ── テンプレート定義 ──────────────────────────────────────── */
 const TEMPLATES = [
@@ -112,23 +111,19 @@ export function TemplateSelect() {
             "radial-gradient(ellipse 80% 50% at 50% -10%, rgba(99,102,241,0.10) 0%, transparent 70%)",
         }}
       >
-          <div className="max-w-xl mx-auto space-y-3">
-            <div className="inline-flex items-center gap-2 bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-semibold px-3 py-1.5 rounded-full">
-              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
-              テンプレートを選んでください
-            </div>
-            <h1 className="text-3xl sm:text-4xl font-black tracking-tight">
-              どの書類を{" "}
-              <span className="bg-gradient-to-r from-indigo-600 to-violet-500 bg-clip-text text-transparent">
-                作りますか？
-              </span>
-            </h1>
-            <p className="text-slate-500 text-sm">全テンプレート無料・登録不要。あとから変更もできます。</p>
+        <div className="max-w-xl mx-auto space-y-3">
+          <div className="inline-flex items-center gap-2 bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-semibold px-3 py-1.5 rounded-full">
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+            テンプレートを選んでください
           </div>
-          {/* キャラクター */}
-          <div className="flex justify-center mt-4">
-            <OwlCharacter variant="workshop" height={120} />
-          </div>
+          <h1 className="text-3xl sm:text-4xl font-black tracking-tight">
+            どの書類を{" "}
+            <span className="bg-gradient-to-r from-indigo-600 to-violet-500 bg-clip-text text-transparent">
+              作りますか？
+            </span>
+          </h1>
+          <p className="text-slate-500 text-sm">全テンプレート無料・登録不要。あとから変更もできます。</p>
+        </div>
       </section>
 
       {/* ── テンプレートグリッド ── */}

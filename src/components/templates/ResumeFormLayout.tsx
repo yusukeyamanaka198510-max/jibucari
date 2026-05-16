@@ -19,7 +19,6 @@ import {
   ChevronLeft, ChevronRight, Download, Eye, Check,
   Camera, Mail, Trash2, CalendarDays, X, CheckCircle2,
 } from "lucide-react";
-import { OwlCharacter } from "@/components/atoms/OwlCharacter";
 import { cn } from "@/lib/utils";
 import type { ResumeFormat } from "@/types";
 
@@ -453,9 +452,7 @@ function ReviewStep({
     <div className="space-y-6 py-2">
       {/* 完了メッセージ */}
       <div className="text-center space-y-2">
-        <div className="flex justify-center">
-          <OwlCharacter variant="congrats" height={120} />
-        </div>
+        <div className="text-5xl">🎉</div>
         <h3 className="text-xl font-black text-slate-900">入力完了！</h3>
         <p className="text-slate-500 text-sm">内容を確認して、PDFを保存・送信しましょう。</p>
       </div>
@@ -513,14 +510,11 @@ function ReviewStep({
       {/* ─────────── ジブキャリ面談依頼 ─────────── */}
       <div className="rounded-xl border-2 border-indigo-200 bg-indigo-50/40 p-4 space-y-3">
         <div className="flex items-start justify-between gap-2">
-          <div className="flex items-end gap-3">
-            <OwlCharacter variant="interviewer" height={72} />
-            <div>
-              <p className="text-sm font-bold text-indigo-800">ジブキャリスタッフに無料面談依頼</p>
-              <p className="text-xs text-indigo-600 mt-0.5">
-                就活・転職のプロが無料で相談に乗ります
-              </p>
-            </div>
+          <div>
+            <p className="text-sm font-bold text-indigo-800">ジブキャリスタッフに無料面談依頼</p>
+            <p className="text-xs text-indigo-600 mt-0.5">
+              就活・転職のプロが無料で相談に乗ります
+            </p>
           </div>
           <CalendarDays className="h-5 w-5 text-indigo-400 flex-shrink-0 mt-0.5" />
         </div>
