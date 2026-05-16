@@ -405,13 +405,16 @@ function ReviewStep({
   const name = info ? `${info.lastName}${info.firstName}` : "";
 
   const [consultOpen, setConsultOpen]   = useState(false);
-  const [date1, setDate1]               = useState("");
-  const [date2, setDate2]               = useState("");
-  const [date3, setDate3]               = useState("");
+  const [date1, setDate1]               = useState({ date: "", hour: "10" });
+  const [date2, setDate2]               = useState({ date: "", hour: "10" });
+  const [date3, setDate3]               = useState({ date: "", hour: "10" });
   const [topic, setTopic]               = useState("job_hunting");
   const [isSending, setIsSending]       = useState(false);
   const [sendSuccess, setSendSuccess]   = useState(false);
   const [sendError, setSendError]       = useState("");
+
+  const fmtDate = (d: { date: string; hour: string }) =>
+    d.date ? `${d.date} ${d.hour}:00` : "";
 
   const handleConsultSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -426,9 +429,9 @@ function ReviewStep({
           name,
           email: info?.email ?? "",
           phone: info?.mobilePhone ?? "",
-          date1,
-          date2,
-          date3,
+          date1: fmtDate(date1),
+          date2: fmtDate(date2),
+          date3: fmtDate(date3),
           topic,
         }),
       });
@@ -557,13 +560,24 @@ function ReviewStep({
                     {label}
                     {required && <span className="text-red-500 ml-0.5">*</span>}
                   </label>
-                  <input
-                    type="datetime-local"
-                    value={val}
-                    onChange={(e) => set(e.target.value)}
-                    required={required}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="date"
+                      value={val.date}
+                      onChange={(e) => set((prev) => ({ ...prev, date: e.target.value }))}
+                      required={required}
+                      className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
+                    />
+                    <select
+                      value={val.hour}
+                      onChange={(e) => set((prev) => ({ ...prev, hour: e.target.value }))}
+                      className="w-24 rounded-lg border border-slate-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
+                    >
+                      {Array.from({ length: 13 }, (_, i) => i + 9).map((h) => (
+                        <option key={h} value={String(h)}>{h}:00</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               ))}
             </div>
