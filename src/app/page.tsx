@@ -98,84 +98,90 @@ export default function HomePage() {
           <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-8">
 
             {/* ── 左: テキスト ── */}
-            <div className="flex-1 space-y-7 text-center lg:text-left">
+            <div className="flex-1 space-y-8 text-center lg:text-left">
               {/* バッジ */}
-              <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 text-indigo-200 text-xs font-semibold px-4 py-1.5 rounded-full backdrop-blur-sm">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 text-indigo-200 text-sm font-semibold px-4 py-2 rounded-full backdrop-blur-sm">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 完全無料・登録不要で使えます
               </div>
 
               {/* ヘッドライン */}
-              <div className="space-y-2">
-                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.1] tracking-tight text-white">
-                  転職・就活の書類を
+              <div className="space-y-4">
+                <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black leading-[1.05] tracking-tight text-white">
+                  転職・就活の
+                  <br />書類を
                   <br />
                   <span className="bg-gradient-to-r from-indigo-300 via-violet-300 to-pink-300 bg-clip-text text-transparent">
                     AIで3分で完成。
                   </span>
                 </h1>
-                <p className="text-slate-400 text-base sm:text-lg leading-relaxed max-w-lg mx-auto lg:mx-0">
+                <p className="text-slate-300 text-lg sm:text-xl leading-relaxed max-w-lg mx-auto lg:mx-0">
                   入力するだけでAIが志望動機を書いてくれる。<br />
                   あとはPDFをダウンロードするだけ。
                 </p>
               </div>
 
-              {/* ベネフィット一覧 */}
-              <div className="grid grid-cols-2 gap-2.5 max-w-md mx-auto lg:mx-0">
-                {BENEFITS.map((b) => (
-                  <div
-                    key={b.text}
-                    className="flex items-center gap-2.5 bg-white/8 border border-white/10 rounded-xl px-3 py-2.5 backdrop-blur-sm"
-                  >
-                    <span className="text-lg flex-shrink-0">{b.icon}</span>
-                    <span className="text-xs font-semibold text-slate-200 leading-tight">{b.text}</span>
-                  </div>
+              {/* チェックリスト（シンプルに） */}
+              <ul className="space-y-3 max-w-sm mx-auto lg:mx-0">
+                {[
+                  "🤖　AIが志望動機・自己PRを自動生成",
+                  "📄　JIS準拠PDFをワンクリックでDL",
+                  "🆓　登録不要・クレカ不要・完全無料",
+                ].map((item) => (
+                  <li key={item} className="flex items-center gap-3 text-slate-200 text-base font-medium">
+                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center">
+                      <svg className="w-3 h-3 text-emerald-400" fill="none" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </span>
+                    {item}
+                  </li>
                 ))}
-              </div>
+              </ul>
 
               {/* CTA */}
-              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 pt-1">
+              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 pt-2">
                 <Link
                   href="/resume/new"
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-500 to-violet-500 text-white font-bold text-base px-8 py-4 rounded-2xl shadow-xl shadow-indigo-500/40 hover:shadow-indigo-500/60 hover:scale-105 transition-all duration-200"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-500 to-violet-500 text-white font-bold text-lg px-10 py-5 rounded-2xl shadow-2xl shadow-indigo-500/40 hover:shadow-indigo-500/70 hover:scale-105 transition-all duration-200"
                 >
                   ✦ 今すぐ無料でつくる
                 </Link>
-                <a
-                  href="#how"
-                  className="w-full sm:w-auto inline-flex items-center justify-center text-slate-300 font-semibold text-sm px-6 py-4 rounded-2xl border border-white/15 hover:border-white/30 hover:text-white transition-colors backdrop-blur-sm"
-                >
-                  使い方を見る →
-                </a>
               </div>
 
-              <p className="text-xs text-slate-500">
+              <p className="text-sm text-slate-500">
                 クレジットカード不要 ・ アカウント登録不要 ・ 広告なし
               </p>
             </div>
 
             {/* ── 右: フクロウキャラクター ── */}
-            <div className="relative flex-shrink-0 flex items-center justify-center">
-              {/* グロー */}
-              <div className="absolute inset-0 bg-indigo-500 rounded-full blur-3xl opacity-20 scale-75" />
+            <div className="relative flex-shrink-0 flex items-center justify-center lg:ml-8">
+              {/* グロー（背景光） */}
+              <div className="absolute w-80 h-80 bg-indigo-500 rounded-full blur-[80px] opacity-25" />
 
               {/* フキダシ（左上） */}
-              <div className="absolute -top-4 -left-6 bg-white rounded-2xl rounded-bl-sm px-3 py-1.5 shadow-xl z-10 hidden sm:block">
-                <p className="text-xs font-bold text-indigo-700 whitespace-nowrap">志望動機、AIに任せよう！</p>
+              <div className="absolute -top-6 -left-8 z-20 hidden sm:block">
+                <div className="bg-white rounded-2xl rounded-bl-md px-5 py-3 shadow-2xl border border-indigo-100">
+                  <p className="text-sm font-bold text-indigo-700 whitespace-nowrap">🤖 志望動機、AIに任せよう！</p>
+                </div>
+                {/* 吹き出し三角 */}
+                <div className="absolute bottom-0 left-6 w-3 h-3 bg-white rotate-45 translate-y-1.5 border-r border-b border-indigo-100" />
               </div>
 
               {/* フキダシ（右下） */}
-              <div className="absolute -bottom-2 -right-4 bg-indigo-600 rounded-2xl rounded-br-sm px-3 py-1.5 shadow-xl z-10 hidden sm:block">
-                <p className="text-xs font-bold text-white whitespace-nowrap">📄 PDF即ダウンロード</p>
+              <div className="absolute -bottom-6 -right-8 z-20 hidden sm:block">
+                <div className="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl rounded-br-md px-5 py-3 shadow-2xl">
+                  <p className="text-sm font-bold text-white whitespace-nowrap">📄 PDF即ダウンロード！</p>
+                </div>
+                <div className="absolute top-0 right-6 w-3 h-3 bg-violet-600 rotate-45 -translate-y-1.5" />
               </div>
 
-              <div className="relative w-72 h-72 sm:w-80 sm:h-80 lg:w-96 lg:h-96">
+              {/* フクロウ画像 */}
+              <div className="relative w-80 h-80 sm:w-[420px] sm:h-[420px] lg:w-[500px] lg:h-[500px]">
                 <Image
                   src="/images/owl-hero.png"
                   alt="ジブキャリ キャラクター"
                   fill
-                  className="object-contain drop-shadow-2xl"
-                  style={{ mixBlendMode: "screen" }}
+                  className="object-contain"
+                  style={{ mixBlendMode: "lighten" }}
                   priority
                 />
               </div>
