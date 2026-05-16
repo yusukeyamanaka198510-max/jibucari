@@ -102,7 +102,7 @@ export default function HomePage() {
           </div>
 
           {/* ヘッドライン */}
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black leading-[1.08] tracking-tight text-white mb-6">
+          <h1 className="text-[2rem] sm:text-5xl lg:text-7xl font-black leading-[1.1] tracking-tight text-white mb-6">
             転職・就活の書類を
             <br />
             <span className="bg-gradient-to-r from-indigo-300 via-violet-300 to-pink-300 bg-clip-text text-transparent">
