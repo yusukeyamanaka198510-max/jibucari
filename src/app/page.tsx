@@ -158,26 +158,26 @@ export default function HomePage() {
       </section>
 
       {/* ── 使い方 3ステップ ────────────────────────────── */}
-      <section id="how" className="py-20 px-5 bg-white">
+      <section id="how" className="py-12 px-5 bg-white">
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-12 space-y-2">
+          <div className="text-center mb-8 space-y-1">
             <p className="text-indigo-600 font-semibold text-sm tracking-widest uppercase">How it works</p>
-            <h2 className="text-3xl font-black">たった3ステップで完成</h2>
+            <h2 className="text-2xl font-black">たった3ステップで完成</h2>
             <p className="text-slate-500 text-sm">難しい操作は一切なし。フォームに答えるだけ。</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {STEPS.map((s, i) => (
-              <div key={s.n} className="relative bg-slate-50 rounded-2xl p-7 space-y-3 border border-slate-100">
+              <div key={s.n} className="relative bg-slate-50 rounded-2xl p-5 space-y-2 border border-slate-100">
                 {i < STEPS.length - 1 && (
                   <div className="hidden sm:block absolute top-10 -right-3 text-slate-300 text-xl z-10">→</div>
                 )}
-                <div className="flex items-center gap-3">
-                  <span className="text-3xl font-black bg-gradient-to-r from-indigo-600 to-violet-500 bg-clip-text text-transparent">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-black bg-gradient-to-r from-indigo-600 to-violet-500 bg-clip-text text-transparent">
                     {s.n}
                   </span>
-                  <span className="text-2xl">{s.icon}</span>
+                  <span className="text-xl">{s.icon}</span>
                 </div>
-                <p className="font-bold text-lg">{s.title}</p>
+                <p className="font-bold text-base">{s.title}</p>
                 <p className="text-sm text-slate-500 leading-relaxed">{s.body}</p>
               </div>
             ))}
@@ -186,21 +186,21 @@ export default function HomePage() {
       </section>
 
       {/* ── 作れる書類 ──────────────────────────────────── */}
-      <section id="docs" className="py-20 px-5 bg-gradient-to-b from-slate-50 to-white">
+      <section id="docs" className="py-12 px-5 bg-gradient-to-b from-slate-50 to-white">
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-12 space-y-2">
+          <div className="text-center mb-8 space-y-1">
             <p className="text-indigo-600 font-semibold text-sm tracking-widest uppercase">Documents</p>
-            <h2 className="text-3xl font-black">作れる書類</h2>
+            <h2 className="text-2xl font-black">作れる書類</h2>
             <p className="text-slate-500 text-sm">就活・転職・バイトに必要な書類をすべてカバー。</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {DOC_TYPES.map((d) => {
               const inner = (
-                <div className={`group relative overflow-hidden rounded-2xl ${d.bg} border ${d.border} p-6 flex items-center gap-5 transition-all duration-200 ${d.disabled ? "opacity-50 cursor-not-allowed" : "hover:shadow-xl hover:-translate-y-1 cursor-pointer"}`}>
+                <div className={`group relative overflow-hidden rounded-2xl ${d.bg} border ${d.border} p-4 flex items-center gap-4 transition-all duration-200 ${d.disabled ? "opacity-50 cursor-not-allowed" : "hover:shadow-xl hover:-translate-y-1 cursor-pointer"}`}>
                   <div className={`absolute inset-y-0 left-0 w-1.5 rounded-l-2xl bg-gradient-to-b ${d.color}`} />
-                  <span className="text-4xl">{d.emoji}</span>
+                  <span className="text-3xl">{d.emoji}</span>
                   <div className="min-w-0 flex-1">
-                    <p className="font-bold text-lg text-slate-900">{d.label}</p>
+                    <p className="font-bold text-base text-slate-900">{d.label}</p>
                     <p className={`text-sm truncate ${d.disabled ? "text-amber-500 font-medium" : "text-slate-500"}`}>{d.sub}</p>
                   </div>
                   {!d.disabled && (
@@ -219,22 +219,24 @@ export default function HomePage() {
       </section>
 
       {/* ── 機能一覧 ────────────────────────────────────── */}
-      <section className="py-20 px-5 bg-white">
+      <section className="py-12 px-5 bg-white">
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-12 space-y-2">
+          <div className="text-center mb-8 space-y-1">
             <p className="text-indigo-600 font-semibold text-sm tracking-widest uppercase">Features</p>
-            <h2 className="text-3xl font-black">すべての機能が無料</h2>
+            <h2 className="text-2xl font-black">すべての機能が無料</h2>
             <p className="text-slate-500 text-sm">登録・支払い不要で全機能が使い放題。</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {FEATURES.map((f) => (
               <div
                 key={f.title}
-                className="bg-slate-50 rounded-2xl p-6 border border-slate-100 hover:border-indigo-200 hover:shadow-md hover:bg-white transition-all duration-200 space-y-2"
+                className="bg-slate-50 rounded-xl p-4 border border-slate-100 hover:border-indigo-200 hover:shadow-md hover:bg-white transition-all duration-200 flex gap-3 items-start"
               >
-                <span className="text-3xl">{f.icon}</span>
-                <p className="font-bold text-base">{f.title}</p>
-                <p className="text-sm text-slate-500 leading-relaxed">{f.body}</p>
+                <span className="text-2xl flex-shrink-0 mt-0.5">{f.icon}</span>
+                <div>
+                  <p className="font-bold text-sm">{f.title}</p>
+                  <p className="text-xs text-slate-500 leading-relaxed mt-0.5">{f.body}</p>
+                </div>
               </div>
             ))}
           </div>
@@ -242,9 +244,9 @@ export default function HomePage() {
       </section>
 
       {/* ── ボトムCTA ───────────────────────────────────── */}
-      <section className="py-24 px-5">
+      <section className="py-12 px-5">
         <div
-          className="max-w-3xl mx-auto rounded-3xl text-center text-white p-12 sm:p-16 space-y-6 relative overflow-hidden"
+          className="max-w-3xl mx-auto rounded-3xl text-center text-white p-8 sm:p-12 space-y-5 relative overflow-hidden"
           style={{ background: "linear-gradient(135deg, #3730a3 0%, #4F46E5 40%, #7C3AED 100%)" }}
         >
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,rgba(255,255,255,0.12),transparent)]" />
