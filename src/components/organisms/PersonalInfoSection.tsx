@@ -96,8 +96,10 @@ export function PersonalInfoSection({ className }: { className?: string }) {
       const result = await lookupPostalCode(digits);
       setIsLooking(false);
       if (result) {
-        setZipKana(result.kana);
-        updatePersonalInfo({ prefecture: result.prefecture, city: result.city, addressKana: result.kana });
+        const cleanKana = (s: string) => s.replace(/([ァ-ヴ])゛/g, "$1").replace(/([ァ-ヴ])゜/g, "$1");
+        const kana = cleanKana(result.kana);
+        setZipKana(kana);
+        updatePersonalInfo({ prefecture: result.prefecture, city: result.city, addressKana: kana });
         setLookupDone(true);
       } else {
         setLookupError("住所が見つかりませんでした");

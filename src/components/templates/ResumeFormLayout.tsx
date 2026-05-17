@@ -125,7 +125,9 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
 
   const handlePasteProfile = async () => {
     if (!savedProfile) return;
-    // 郵便番号から住所フリガナを取得
+    // zipcloudのカナから重複濁点を除去する
+    const cleanKana = (s: string) => s.replace(/([ァ-ヴ])゛/g, "$1").replace(/([ァ-ヴ])゜/g, "$1");
+    // 郵便番号から住所フリガナを取得（番地も追加）
     let addressKana = "";
     const digits = (savedProfile.postalCode ?? "").replace(/-/g, "");
     if (digits.length === 7) {
@@ -134,7 +136,7 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
         const json = await res.json();
         if (json.status === 200 && json.results) {
           const r = json.results[0];
-          addressKana = `${r.kana1}${r.kana2}${r.kana3}`;
+          addressKana = cleanKana(`${r.kana1}${r.kana2}${r.kana3}`) + (savedProfile.streetAddress ?? "");
         }
       } catch { /* フリガナ取得失敗時は空のまま */ }
     }
