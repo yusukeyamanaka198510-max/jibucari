@@ -10,6 +10,8 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight, Download, Plus, Trash2, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TechSkill, ProjectEntry } from "@/types/skillSheet";
+import { ProfileSyncBar } from "@/components/molecules/ProfileSyncBar";
+import { useProfileStore } from "@/store/profileStore";
 
 const STEPS = [
   { id: 1, label: "基本情報",         short: "基本" },
@@ -78,6 +80,37 @@ export function SkillSheetFormLayout() {
       a.href = url; a.download = `${current.title}.pdf`; a.click();
       URL.revokeObjectURL(url);
     } finally { setIsGenerating(false); }
+  };
+
+  const { saveProfile, profile: savedProfile } = useProfileStore();
+
+  const handleSaveProfile = async (userId: string) => {
+    if (!current) return;
+    await saveProfile(userId, {
+      lastName: current.lastName,
+      firstName: current.firstName,
+      lastNameKana: current.lastNameKana,
+      firstNameKana: current.firstNameKana,
+      birthDate: current.birthDate,
+      gender: "",
+      postalCode: "",
+      prefecture: "",
+      city: "",
+      addressDetail: "",
+      phone: "",
+      email: current.email,
+    });
+  };
+
+  const handlePasteProfile = () => {
+    if (!savedProfile) return;
+    const update = useSkillSheetStore.getState().updateField;
+    update({ lastName: savedProfile.lastName });
+    update({ firstName: savedProfile.firstName });
+    update({ lastNameKana: savedProfile.lastNameKana });
+    update({ firstNameKana: savedProfile.firstNameKana });
+    update({ birthDate: savedProfile.birthDate });
+    update({ email: savedProfile.email });
   };
 
   if (!current) {
@@ -153,7 +186,12 @@ export function SkillSheetFormLayout() {
             <h2 className="text-xl font-black text-slate-900">{STEPS[step - 1]?.label}</h2>
           </div>
           <div className="space-y-5">
-            {step === 1 && <BasicInfoStep />}
+            {step === 1 && (
+              <>
+                <ProfileSyncBar onSave={handleSaveProfile} onPaste={handlePasteProfile} />
+                <BasicInfoStep />
+              </>
+            )}
             {step === 2 && <SummaryStep />}
             {step === 3 && <SkillsStep />}
             {step === 4 && <ProjectsStep />}

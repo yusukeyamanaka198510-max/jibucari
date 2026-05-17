@@ -21,6 +21,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ResumeFormat } from "@/types";
+import { ProfileSyncBar } from "@/components/molecules/ProfileSyncBar";
+import { useProfileStore } from "@/store/profileStore";
 
 interface ResumeFormLayoutProps {
   format?: ResumeFormat;
@@ -98,6 +100,44 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
   }, []);
 
   useAutoSave();
+
+  const { saveProfile, profile: savedProfile } = useProfileStore();
+
+  const handleSaveProfile = async (userId: string) => {
+    if (!current) return;
+    const pi = current.personalInfo;
+    await saveProfile(userId, {
+      lastName: pi.lastName,
+      firstName: pi.firstName,
+      lastNameKana: pi.lastNameKana,
+      firstNameKana: pi.firstNameKana,
+      birthDate: pi.birthDate,
+      gender: pi.gender,
+      postalCode: pi.postalCode,
+      prefecture: pi.prefecture,
+      city: pi.city,
+      addressDetail: [pi.streetAddress, pi.building].filter(Boolean).join(" "),
+      phone: pi.mobilePhone,
+      email: pi.email,
+    });
+  };
+
+  const handlePasteProfile = () => {
+    if (!savedProfile) return;
+    useResumeStore.getState().updatePersonalInfo({
+      lastName: savedProfile.lastName,
+      firstName: savedProfile.firstName,
+      lastNameKana: savedProfile.lastNameKana,
+      firstNameKana: savedProfile.firstNameKana,
+      birthDate: savedProfile.birthDate,
+      postalCode: savedProfile.postalCode,
+      prefecture: savedProfile.prefecture,
+      city: savedProfile.city,
+      streetAddress: savedProfile.addressDetail,
+      mobilePhone: savedProfile.phone,
+      email: savedProfile.email,
+    });
+  };
 
   if (!current) {
     return (
@@ -242,7 +282,12 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
             </div>
 
             <div className="space-y-6">
-              {step === 1 && <PersonalInfoSection />}
+              {step === 1 && (
+                <>
+                  <ProfileSyncBar onSave={handleSaveProfile} onPaste={handlePasteProfile} />
+                  <PersonalInfoSection />
+                </>
+              )}
               {step === 2 && <EducationSection format={activeFormat} />}
               {step === 3 && <WorkHistorySection format={activeFormat} />}
               {step === 4 && <LicenseSection />}

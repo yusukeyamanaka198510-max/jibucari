@@ -10,6 +10,8 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight, Download, Plus, Trash2, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { EnclosureItem } from "@/types/coverLetter";
+import { ProfileSyncBar } from "@/components/molecules/ProfileSyncBar";
+import { useProfileStore } from "@/store/profileStore";
 
 const inputCls = "w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white";
 const labelCls = "block text-sm font-semibold text-slate-700 mb-1";
@@ -61,6 +63,36 @@ export function CoverLetterFormLayout() {
       a.href = url; a.download = `${current.title}.pdf`; a.click();
       URL.revokeObjectURL(url);
     } finally { setIsGenerating(false); }
+  };
+
+  const { saveProfile, profile: savedProfile } = useProfileStore();
+
+  const handleSaveProfile = async (userId: string) => {
+    if (!current) return;
+    await saveProfile(userId, {
+      lastName: current.yourLastName,
+      firstName: current.yourFirstName,
+      lastNameKana: "",
+      firstNameKana: "",
+      birthDate: "",
+      gender: "",
+      postalCode: "",
+      prefecture: "",
+      city: "",
+      addressDetail: current.yourAddress,
+      phone: current.yourPhone,
+      email: current.yourEmail,
+    });
+  };
+
+  const handlePasteProfile = () => {
+    if (!savedProfile) return;
+    const update = useCoverLetterStore.getState().updateField;
+    update({ yourLastName: savedProfile.lastName });
+    update({ yourFirstName: savedProfile.firstName });
+    update({ yourAddress: [savedProfile.prefecture, savedProfile.city, savedProfile.addressDetail].filter(Boolean).join("") });
+    update({ yourPhone: savedProfile.phone });
+    update({ yourEmail: savedProfile.email });
   };
 
   if (!current) {
@@ -141,7 +173,12 @@ export function CoverLetterFormLayout() {
           </div>
           <div className="space-y-5">
             {step === 1 && <TypeDateStep />}
-            {step === 2 && <SenderStep />}
+            {step === 2 && (
+              <>
+                <ProfileSyncBar onSave={handleSaveProfile} onPaste={handlePasteProfile} />
+                <SenderStep />
+              </>
+            )}
             {step === 3 && current.type === "resignation" && <ResignationStep />}
             {step === 3 && current.type !== "resignation" && <RecipientStep />}
             {step === 4 && current.type !== "resignation" && <EnclosureMessageStep />}

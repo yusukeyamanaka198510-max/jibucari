@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { NavUser } from "@/components/molecules/NavUser";
 
 /* ─── データ定義 ──────────────────────────────────────────── */
 const BENEFITS = [
@@ -97,12 +98,15 @@ export default function HomePage() {
           <span className="font-black text-xl tracking-tight bg-gradient-to-r from-indigo-600 to-violet-500 bg-clip-text text-transparent">
             ジブキャリ
           </span>
-          <Link
-            href="/resume/new"
-            className="text-sm font-bold bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-5 py-2 rounded-full hover:shadow-lg hover:shadow-indigo-500/30 hover:scale-105 transition-all duration-200"
-          >
-            無料でつくる →
-          </Link>
+          <div className="flex items-center gap-4">
+            <NavUser />
+            <Link
+              href="/resume/new"
+              className="text-sm font-bold bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-5 py-2 rounded-full hover:shadow-lg hover:shadow-indigo-500/30 hover:scale-105 transition-all duration-200"
+            >
+              無料でつくる →
+            </Link>
+          </div>
         </div>
       </nav>
 
@@ -304,6 +308,51 @@ export default function HomePage() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── スカウト告知 ────────────────────────────────────── */}
+      <section className="py-14 px-5 bg-gradient-to-b from-white to-indigo-50">
+        <div className="max-w-4xl mx-auto">
+          <div className="relative overflow-hidden rounded-3xl border-2 border-indigo-100 bg-white px-8 py-10 sm:px-14 sm:py-12 shadow-xl shadow-indigo-100/50">
+            <div className="pointer-events-none absolute -top-20 -right-20 w-72 h-72 bg-indigo-100 rounded-full blur-3xl opacity-60" />
+            <div className="pointer-events-none absolute -bottom-16 -left-16 w-56 h-56 bg-violet-100 rounded-full blur-3xl opacity-60" />
+            <div className="relative flex flex-col sm:flex-row items-center sm:items-start gap-8">
+              <div className="flex-shrink-0">
+                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-4xl shadow-lg shadow-indigo-200">
+                  🎯
+                </div>
+              </div>
+              <div className="flex-1 text-center sm:text-left">
+                <p className="text-xs font-bold text-indigo-500 tracking-widest uppercase mb-2">Scout Feature</p>
+                <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mb-3 leading-snug">
+                  登録情報をもとに<br className="sm:hidden" />スカウトが届くかも。
+                </h2>
+                <p className="text-slate-500 text-sm sm:text-base leading-relaxed mb-6">
+                  プロフィールを登録すると、ジブキャリのキャリアアドバイザーが内容を確認。あなたの経験・スキルに合った求人や面談のご案内が届く可能性があります。<br />
+                  <span className="font-semibold text-indigo-600">履歴書を作るだけで、チャンスが広がります。</span>
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 mb-7">
+                  {[
+                    { icon: "📬", text: "非公開求人のご案内" },
+                    { icon: "🤝", text: "キャリア相談も無料" },
+                    { icon: "🔒", text: "プロフィールは非公開" },
+                  ].map((item) => (
+                    <div key={item.text} className="flex items-center gap-2 bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-2.5">
+                      <span className="text-lg">{item.icon}</span>
+                      <span className="text-sm font-semibold text-indigo-700">{item.text}</span>
+                    </div>
+                  ))}
+                </div>
+                <Link
+                  href="/register"
+                  className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold px-8 py-3.5 rounded-2xl shadow-lg shadow-indigo-300/50 hover:shadow-indigo-400/60 hover:scale-105 transition-all duration-200"
+                >
+                  ✦ 無料で登録してスカウトを待つ
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </section>

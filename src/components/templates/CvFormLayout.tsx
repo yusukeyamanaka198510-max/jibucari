@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { CvWorkEntry, CvSkillEntry } from "@/types/cv";
+import { ProfileSyncBar } from "@/components/molecules/ProfileSyncBar";
+import { useProfileStore } from "@/store/profileStore";
 
 const STEPS = [
   { id: 1, label: "基本情報",   short: "基本" },
@@ -65,6 +67,41 @@ export function CvFormLayout() {
       a.href = url; a.download = `${current.title}.pdf`; a.click();
       URL.revokeObjectURL(url);
     } finally { setIsGenerating(false); }
+  };
+
+  const { saveProfile, profile: savedProfile } = useProfileStore();
+
+  const handleSaveProfile = async (userId: string) => {
+    if (!current) return;
+    await saveProfile(userId, {
+      lastName: current.lastName,
+      firstName: current.firstName,
+      lastNameKana: current.lastNameKana,
+      firstNameKana: current.firstNameKana,
+      birthDate: current.birthDate,
+      gender: "",
+      postalCode: "",
+      prefecture: "",
+      city: "",
+      addressDetail: current.address,
+      phone: current.mobilePhone,
+      email: current.email,
+    });
+  };
+
+  const handlePasteProfile = () => {
+    if (!savedProfile) return;
+    const update = useCvStore.getState().updateField;
+    update({
+      lastName: savedProfile.lastName,
+      firstName: savedProfile.firstName,
+      lastNameKana: savedProfile.lastNameKana,
+      firstNameKana: savedProfile.firstNameKana,
+      birthDate: savedProfile.birthDate,
+      address: [savedProfile.prefecture, savedProfile.city, savedProfile.addressDetail].filter(Boolean).join(""),
+      mobilePhone: savedProfile.phone,
+      email: savedProfile.email,
+    });
   };
 
   if (!current) {
@@ -141,7 +178,12 @@ export function CvFormLayout() {
             <h2 className="text-xl font-black text-slate-900">{STEPS[step - 1]?.label}</h2>
           </div>
           <div className="space-y-5">
-            {step === 1 && <BasicInfoStep />}
+            {step === 1 && (
+              <>
+                <ProfileSyncBar onSave={handleSaveProfile} onPaste={handlePasteProfile} />
+                <BasicInfoStep />
+              </>
+            )}
             {step === 2 && <SummaryStep />}
             {step === 3 && <WorkHistoryStep />}
             {step === 4 && <SkillsStep />}
