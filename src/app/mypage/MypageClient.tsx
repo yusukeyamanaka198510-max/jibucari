@@ -1,15 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   User, LogOut, FileText, ChevronRight, Save, Pencil, X, Check,
-  Phone, Mail, MapPin, Calendar, BadgeCheck,
+  Phone, Mail, MapPin, Calendar, BadgeCheck, Loader2,
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { useProfileStore } from "@/store/profileStore";
+import { BirthDatePicker } from "@/components/molecules/BirthDatePicker";
 import type { UserProfileData } from "@/infrastructure/supabase/profileRepository";
+
+// ひらがな → カタカナ変換
+const toKatakana = (str: string) =>
+  str.replace(/[ぁ-ゖ]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0x60));
+
+async function lookupPostalCode(digits: string): Promise<{ prefecture: string; city: string } | null> {
+  try {
+    const res = await fetch(`https://zipcloud.ibsnet.co.jp/api/search?zipcode=${digits}`);
+    const json = await res.json();
+    if (json.status !== 200 || !json.results) return null;
+    const r = json.results[0];
+    return { prefecture: r.address1 as string, city: `${r.address2}${r.address3}` as string };
+  } catch {
+    return null;
+  }
+}
 
 const GENDER_LABELS: Record<string, string> = {
   male: "男性", female: "女性", other: "その他 / 回答しない",
@@ -50,6 +67,10 @@ export function MypageClient({ userId, userEmail, initialProfile }: MypageClient
   );
   const [saved, setSaved] = useState(!!initialProfile);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isLooking, setIsLooking] = useState(false);
+  const [lookupDone, setLookupDone] = useState(false);
+  const [lookupError, setLookupError] = useState<string | null>(null);
+  const lastKanaRef = useRef("");
 
   const handleSignOut = async () => {
     await signOut();
@@ -58,6 +79,40 @@ export function MypageClient({ userId, userEmail, initialProfile }: MypageClient
 
   const handleChange = (key: keyof ProfileForm, value: string) => {
     setProfile((p) => ({ ...p, [key]: value }));
+  };
+
+  const handlePostalCode = async (raw: string) => {
+    const digits = raw.replace(/-/g, "");
+    const formatted = digits.length > 3 ? `${digits.slice(0, 3)}-${digits.slice(3, 7)}` : digits;
+    setProfile((p) => ({ ...p, postalCode: formatted }));
+    setLookupError(null);
+    setLookupDone(false);
+    if (digits.length === 7) {
+      setIsLooking(true);
+      const result = await lookupPostalCode(digits);
+      setIsLooking(false);
+      if (result) {
+        setProfile((p) => ({ ...p, prefecture: result.prefecture, city: result.city }));
+        setLookupDone(true);
+      } else {
+        setLookupError("住所が見つかりませんでした");
+      }
+    }
+  };
+
+  const makeKanaHandlers = (kanaKey: "lastNameKana" | "firstNameKana") => {
+    const isKanaOnly = (str: string) => /^[ぁ-ゖァ-ヶーｦ-ﾟ\s]+$/.test(str);
+    return {
+      onCompositionUpdate: (e: React.CompositionEvent<HTMLInputElement>) => {
+        if (isKanaOnly(e.data)) lastKanaRef.current = toKatakana(e.data);
+      },
+      onCompositionEnd: () => {
+        if (lastKanaRef.current) {
+          setProfile((p) => ({ ...p, [kanaKey]: p[kanaKey] || lastKanaRef.current }));
+          lastKanaRef.current = "";
+        }
+      },
+    };
   };
 
   const handleSave = async () => {
@@ -138,10 +193,10 @@ export function MypageClient({ userId, userEmail, initialProfile }: MypageClient
             <Section label="氏名">
               {isEditing ? (
                 <div className="grid grid-cols-2 gap-3">
-                  <Field label="姓" value={profile.lastName} onChange={(v) => handleChange("lastName", v)} placeholder="山田" />
-                  <Field label="名" value={profile.firstName} onChange={(v) => handleChange("firstName", v)} placeholder="太郎" />
-                  <Field label="せい（カナ）" value={profile.lastNameKana} onChange={(v) => handleChange("lastNameKana", v)} placeholder="ヤマダ" />
-                  <Field label="めい（カナ）" value={profile.firstNameKana} onChange={(v) => handleChange("firstNameKana", v)} placeholder="タロウ" />
+                  <Field label="姓" value={profile.lastName} onChange={(v) => handleChange("lastName", v)} placeholder="山田" extraProps={makeKanaHandlers("lastNameKana")} />
+                  <Field label="名" value={profile.firstName} onChange={(v) => handleChange("firstName", v)} placeholder="太郎" extraProps={makeKanaHandlers("firstNameKana")} />
+                  <Field label="せい（カナ）" value={profile.lastNameKana} onChange={(v) => handleChange("lastNameKana", v)} placeholder="ヤマダ" hint="漢字入力で自動入力" />
+                  <Field label="めい（カナ）" value={profile.firstNameKana} onChange={(v) => handleChange("firstNameKana", v)} placeholder="タロウ" hint="漢字入力で自動入力" />
                 </div>
               ) : (
                 <div className="space-y-1">
@@ -154,8 +209,11 @@ export function MypageClient({ userId, userEmail, initialProfile }: MypageClient
             {/* 生年月日・性別 */}
             <Section label="生年月日 / 性別">
               {isEditing ? (
-                <div className="grid grid-cols-2 gap-3">
-                  <Field label="生年月日" type="date" value={profile.birthDate} onChange={(v) => handleChange("birthDate", v)} />
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">生年月日</label>
+                    <BirthDatePicker value={profile.birthDate} onChange={(v) => handleChange("birthDate", v)} />
+                  </div>
                   <div>
                     <label className="block text-xs text-slate-400 mb-1">性別</label>
                     <select
@@ -182,7 +240,22 @@ export function MypageClient({ userId, userEmail, initialProfile }: MypageClient
             <Section label="住所">
               {isEditing ? (
                 <div className="space-y-3">
-                  <Field label="郵便番号" value={profile.postalCode} onChange={(v) => handleChange("postalCode", v)} placeholder="123-4567" />
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">郵便番号</label>
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <input
+                        value={profile.postalCode}
+                        onChange={(e) => handlePostalCode(e.target.value)}
+                        placeholder="123-4567"
+                        maxLength={8}
+                        className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-36 focus:outline-none focus:ring-2 focus:ring-indigo-300 placeholder:text-slate-300"
+                      />
+                      {isLooking && <span className="flex items-center gap-1 text-xs text-indigo-500"><Loader2 className="h-3.5 w-3.5 animate-spin" />検索中...</span>}
+                      {lookupDone && !isLooking && <span className="flex items-center gap-1 text-xs text-emerald-600"><MapPin className="h-3.5 w-3.5" />自動入力しました</span>}
+                      {lookupError && <span className="text-xs text-red-500">{lookupError}</span>}
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">7桁入力で都道府県・市区町村を自動入力</p>
+                  </div>
                   <div>
                     <label className="block text-xs text-slate-400 mb-1">都道府県</label>
                     <select
@@ -304,13 +377,15 @@ function Section({ label, children }: { label: string; children: React.ReactNode
 }
 
 function Field({
-  label, value, onChange, placeholder, type = "text",
+  label, value, onChange, placeholder, type = "text", hint, extraProps,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   type?: string;
+  hint?: string;
+  extraProps?: Record<string, unknown>;
 }) {
   return (
     <div>
@@ -321,7 +396,9 @@ function Field({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 placeholder:text-slate-300"
+        {...(extraProps as React.InputHTMLAttributes<HTMLInputElement>)}
       />
+      {hint && <p className="text-xs text-slate-400 mt-1">{hint}</p>}
     </div>
   );
 }
