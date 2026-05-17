@@ -16,7 +16,12 @@ const NAV_ITEMS = [
   { href: "/admin/users", label: "ユーザー管理", icon: Users, exact: false },
 ];
 
-export function AdminSidebar() {
+interface AdminSidebarProps {
+  mobileOpen?: boolean;
+  onClose?: () => void;
+}
+
+export function AdminSidebar({ mobileOpen = false, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { signOut, isLoading } = useAuthStore();
@@ -29,9 +34,20 @@ export function AdminSidebar() {
   const isActive = (href: string, exact: boolean) =>
     exact ? pathname === href : pathname.startsWith(href);
 
+  const handleNavClick = () => {
+    onClose?.();
+  };
+
   return (
-    <aside className="fixed inset-y-0 left-0 w-64 bg-slate-900 flex flex-col z-30">
-      {/* Brand */}
+    <aside
+      className={`
+        fixed inset-y-0 left-0 w-64 bg-slate-900 flex flex-col z-40
+        transition-transform duration-300 ease-in-out
+        lg:translate-x-0
+        ${mobileOpen ? "translate-x-0" : "-translate-x-full"}
+      `}
+    >
+      {/* Brand（デスクトップのみ表示、モバイルはトップバーに表示） */}
       <div className="h-16 flex items-center gap-2.5 px-5 border-b border-slate-800">
         <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0">
           <ShieldCheck className="w-4 h-4 text-white" />
@@ -53,6 +69,7 @@ export function AdminSidebar() {
             <Link
               key={href}
               href={href}
+              onClick={handleNavClick}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 active
                   ? "bg-indigo-600 text-white"
@@ -70,6 +87,7 @@ export function AdminSidebar() {
       <div className="px-3 py-4 border-t border-slate-800 space-y-1">
         <Link
           href="/dashboard"
+          onClick={handleNavClick}
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-100 transition-colors"
         >
           <ExternalLink className="w-4 h-4 shrink-0" />
