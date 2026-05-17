@@ -272,7 +272,7 @@ export function ResumePdfDocument({ resume }: { resume: Resume }) {
                 <View style={s.divRow}><Text>学　　　歴</Text></View>
               </View>
 
-              {education.map((e) => (
+              {education.filter((e) => e.school?.trim()).map((e) => (
                 <View key={e.id}>
                   <View style={s.row}>
                     <View style={s.yr}><Text>{eraYear(e.entryYear, e.entryMonth)}</Text></View>
