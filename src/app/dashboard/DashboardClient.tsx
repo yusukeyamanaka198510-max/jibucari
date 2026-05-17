@@ -13,6 +13,8 @@ import {
   Download,
   LogOut,
   Clock,
+  Printer,
+  Mail,
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { useResumeStore } from "@/store/resumeStore";
@@ -36,6 +38,24 @@ interface ResumeCardProps {
 function ResumeCard({ resume, onDelete }: ResumeCardProps) {
   const loadResume = useResumeStore((s) => s.loadResume);
   const { download, isGenerating } = usePdfDownload(resume);
+
+  const handlePrint = async () => {
+    const { pdf } = await import("@react-pdf/renderer");
+    const { createElement } = await import("react");
+    const { ResumePdfDocument } = await import("@/components/pdf/ResumePdfDocument");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const blob = await (pdf as any)(createElement(ResumePdfDocument, { resume })).toBlob();
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, "_blank");
+    if (win) win.onload = () => { win.print(); URL.revokeObjectURL(url); };
+  };
+
+  const handleEmail = () => {
+    const name = `${resume.personalInfo?.lastName ?? ""}${resume.personalInfo?.firstName ?? ""}`;
+    const subject = encodeURIComponent(`履歴書（${name}）`);
+    const body = encodeURIComponent(`お世話になっております。\n\n${name}の履歴書をお送りします。\nPDFを別途添付いたします。\n\nよろしくお願いいたします。`);
+    window.open(`mailto:?subject=${subject}&body=${body}`, "_self");
+  };
 
   return (
     <article className="rounded-xl border bg-card p-5 space-y-3 hover:shadow-md transition-shadow">
@@ -80,6 +100,22 @@ function ResumeCard({ resume, onDelete }: ResumeCardProps) {
           aria-label="PDFダウンロード"
         >
           <Download className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handlePrint}
+          aria-label="印刷"
+        >
+          <Printer className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleEmail}
+          aria-label="メール転送"
+        >
+          <Mail className="h-4 w-4" />
         </Button>
         <Button
           variant="ghost"
@@ -134,7 +170,7 @@ export function DashboardClient({ initialResumes, userEmail }: DashboardClientPr
         <div className="container max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" />
-            <span className="font-bold">ヤギ履歴書</span>
+            <span className="font-bold">ジブキャリ</span>
           </div>
           <div className="flex items-center gap-3">
             <span className="hidden sm:block text-sm text-muted-foreground">
