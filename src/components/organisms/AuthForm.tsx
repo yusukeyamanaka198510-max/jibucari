@@ -47,6 +47,7 @@ export function AuthForm({ mode }: AuthFormProps) {
     try {
       if (mode === "login") {
         await signIn(values.email, values.password);
+        router.refresh();
         router.push(nextPath);
       } else {
         await signUp(values.email, values.password);
