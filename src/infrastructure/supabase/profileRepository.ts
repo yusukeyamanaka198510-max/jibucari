@@ -1,4 +1,5 @@
 import { createSupabaseBrowserClient } from "./browserClient";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export interface UserProfileData {
   id: string;
@@ -11,7 +12,8 @@ export interface UserProfileData {
   postalCode: string;
   prefecture: string;
   city: string;
-  addressDetail: string;
+  streetAddress: string;
+  building: string;
   phone: string;
   email: string;
 }
@@ -27,7 +29,8 @@ type DbRow = {
   postal_code: string;
   prefecture: string;
   city: string;
-  address_detail: string;
+  street_address: string;
+  building: string;
   phone: string;
   email: string;
 };
@@ -44,14 +47,18 @@ function toData(row: DbRow): UserProfileData {
     postalCode: row.postal_code,
     prefecture: row.prefecture,
     city: row.city,
-    addressDetail: row.address_detail,
+    streetAddress: row.street_address,
+    building: row.building,
     phone: row.phone,
     email: row.email,
   };
 }
 
 export class SupabaseProfileRepository {
-  private get supabase() {
+  constructor(private readonly _client?: SupabaseClient) {}
+
+  private get supabase(): SupabaseClient {
+    if (this._client) return this._client;
     const client = createSupabaseBrowserClient();
     if (!client) throw new Error("Supabase が設定されていません");
     return client;
@@ -80,7 +87,8 @@ export class SupabaseProfileRepository {
       postal_code: profile.postalCode,
       prefecture: profile.prefecture,
       city: profile.city,
-      address_detail: profile.addressDetail,
+      street_address: profile.streetAddress,
+      building: profile.building,
       phone: profile.phone,
       email: profile.email,
     };

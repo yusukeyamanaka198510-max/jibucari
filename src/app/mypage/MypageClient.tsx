@@ -47,7 +47,7 @@ type ProfileForm = Omit<UserProfileData, "id">;
 const EMPTY_FORM: ProfileForm = {
   lastName: "", firstName: "", lastNameKana: "", firstNameKana: "",
   birthDate: "", gender: "", postalCode: "", prefecture: "",
-  city: "", addressDetail: "", phone: "", email: "",
+  city: "", streetAddress: "", building: "", phone: "", email: "",
 };
 
 interface MypageClientProps {
@@ -268,14 +268,15 @@ export function MypageClient({ userId, userEmail, initialProfile }: MypageClient
                     </select>
                   </div>
                   <Field label="市区町村" value={profile.city} onChange={(v) => handleChange("city", v)} placeholder="渋谷区" />
-                  <Field label="番地・建物名" value={profile.addressDetail} onChange={(v) => handleChange("addressDetail", v)} placeholder="1-1-1 ○○マンション101号室" />
+                  <Field label="番地" value={profile.streetAddress} onChange={(v) => handleChange("streetAddress", v)} placeholder="1-2-3" />
+                  <Field label="建物名・部屋番号" value={profile.building} onChange={(v) => handleChange("building", v)} placeholder="○○マンション101号室" />
                 </div>
               ) : (
                 <p className="flex items-start gap-1.5 text-sm text-slate-700">
                   <MapPin className="h-4 w-4 text-slate-300 mt-0.5 flex-shrink-0" />
                   <span>
                     {profile.postalCode && `〒${profile.postalCode} `}
-                    {profile.prefecture}{profile.city}{profile.addressDetail || "—"}
+                    {profile.prefecture}{profile.city}{profile.streetAddress}{profile.building ? ` ${profile.building}` : (!profile.streetAddress ? "—" : "")}
                   </span>
                 </p>
               )}

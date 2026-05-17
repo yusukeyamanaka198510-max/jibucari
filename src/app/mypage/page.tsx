@@ -18,7 +18,7 @@ export default async function MypagePage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/mypage");
 
-  const repo = new SupabaseProfileRepository();
+  const repo = new SupabaseProfileRepository(supabase);
   let profile = null;
   try {
     profile = await repo.get(user.id);
