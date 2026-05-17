@@ -7,7 +7,7 @@ const BENEFITS = [
   { icon: "⚡", text: "AIが志望動機を自動生成" },
   { icon: "📄", text: "JIS準拠PDFをワンクリックDL" },
   { icon: "💾", text: "入力内容を自動保存" },
-  { icon: "🔒", text: "登録不要・完全無料" },
+  { icon: "🔒", text: "完全無料" },
 ];
 
 const DOC_TYPES = [
@@ -84,7 +84,7 @@ const FEATURES = [
   { icon: "💾", title: "リアルタイム自動保存", body: "入力のたびに保存。途中で閉じても、次回から続きを再開できる。" },
   { icon: "📬", title: "メールで直接送付", body: "作成したPDFをそのまま企業・エージェントにメール送付できる。" },
   { icon: "🎓", title: "フォーマット別テンプレート", body: "転職・新卒・アルバイト・写真なしなど、状況に合わせて選べる。" },
-  { icon: "🆓", title: "全機能・全テンプレート無料", body: "登録不要・クレカ不要。すべての機能を今すぐ無料で使える。" },
+  { icon: "🆓", title: "全機能・全テンプレート無料", body: "クレカ不要。すべての機能を今すぐ無料で使える。" },
 ];
 
 /* ─── ページ ──────────────────────────────────────────────── */
@@ -126,7 +126,7 @@ export default function HomePage() {
               {/* バッジ */}
               <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 text-indigo-200 text-sm font-semibold px-4 py-2 rounded-full backdrop-blur-sm mb-7">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                完全無料・登録不要で使えます
+                完全無料で使えます
               </div>
 
               {/* ヘッドライン */}
@@ -164,7 +164,7 @@ export default function HomePage() {
                 {[
                   { icon: "🤖", text: "AIが志望動機を自動生成" },
                   { icon: "📄", text: "JIS準拠PDF即ダウンロード" },
-                  { icon: "🆓", text: "登録不要・完全無料" },
+                  { icon: "🆓", text: "完全無料" },
                 ].map((b) => (
                   <div
                     key={b.text}
@@ -369,7 +369,7 @@ export default function HomePage() {
             まず、一枚つくってみよう。
           </h2>
           <p className="relative text-indigo-200 text-sm">
-            登録不要。クレカ不要。今すぐ始められる。
+            クレカ不要。今すぐ始められる。
           </p>
           <Link
             href="/resume/new"
