@@ -122,8 +122,21 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
     });
   };
 
-  const handlePasteProfile = () => {
+  const handlePasteProfile = async () => {
     if (!savedProfile) return;
+    // 郵便番号から住所フリガナを取得
+    let addressKana = "";
+    const digits = (savedProfile.postalCode ?? "").replace(/-/g, "");
+    if (digits.length === 7) {
+      try {
+        const res = await fetch(`https://zipcloud.ibsnet.co.jp/api/search?zipcode=${digits}`);
+        const json = await res.json();
+        if (json.status === 200 && json.results) {
+          const r = json.results[0];
+          addressKana = `${r.kana1}${r.kana2}${r.kana3}`;
+        }
+      } catch { /* フリガナ取得失敗時は空のまま */ }
+    }
     useResumeStore.getState().updatePersonalInfo({
       lastName: savedProfile.lastName,
       firstName: savedProfile.firstName,
@@ -134,6 +147,7 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
       prefecture: savedProfile.prefecture,
       city: savedProfile.city,
       streetAddress: savedProfile.addressDetail,
+      addressKana,
       mobilePhone: savedProfile.phone,
       email: savedProfile.email,
     });
