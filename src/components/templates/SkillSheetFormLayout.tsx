@@ -96,7 +96,8 @@ export function SkillSheetFormLayout() {
       postalCode: "",
       prefecture: "",
       city: "",
-      addressDetail: "",
+      streetAddress: "",
+      building: "",
       phone: "",
       email: current.email,
     });

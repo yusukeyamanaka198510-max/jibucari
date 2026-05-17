@@ -79,7 +79,8 @@ export function CoverLetterFormLayout() {
       postalCode: "",
       prefecture: "",
       city: "",
-      addressDetail: current.yourAddress,
+      streetAddress: current.yourAddress,
+      building: "",
       phone: current.yourPhone,
       email: current.yourEmail,
     });
@@ -90,7 +91,7 @@ export function CoverLetterFormLayout() {
     const update = useCoverLetterStore.getState().updateField;
     update({ yourLastName: savedProfile.lastName });
     update({ yourFirstName: savedProfile.firstName });
-    update({ yourAddress: [savedProfile.prefecture, savedProfile.city, savedProfile.addressDetail].filter(Boolean).join("") });
+    update({ yourAddress: [savedProfile.prefecture, savedProfile.city, savedProfile.streetAddress, savedProfile.building].filter(Boolean).join("") });
     update({ yourPhone: savedProfile.phone });
     update({ yourEmail: savedProfile.email });
   };

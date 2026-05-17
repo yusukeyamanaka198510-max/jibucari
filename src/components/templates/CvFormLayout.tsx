@@ -83,7 +83,8 @@ export function CvFormLayout() {
       postalCode: "",
       prefecture: "",
       city: "",
-      addressDetail: current.address,
+      streetAddress: current.address,
+      building: "",
       phone: current.mobilePhone,
       email: current.email,
     });
@@ -98,7 +99,7 @@ export function CvFormLayout() {
       lastNameKana: savedProfile.lastNameKana,
       firstNameKana: savedProfile.firstNameKana,
       birthDate: savedProfile.birthDate,
-      address: [savedProfile.prefecture, savedProfile.city, savedProfile.addressDetail].filter(Boolean).join(""),
+      address: [savedProfile.prefecture, savedProfile.city, savedProfile.streetAddress, savedProfile.building].filter(Boolean).join(""),
       mobilePhone: savedProfile.phone,
       email: savedProfile.email,
     });
