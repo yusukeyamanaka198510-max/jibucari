@@ -86,9 +86,37 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
   const { user, openAuthModal } = useAuthStore();
   const { download: downloadPdf, isGenerating } = usePdfDownload(current);
 
+  const PENDING_ACTION_KEY = "jibucari_pending_action";
+
+  // OAuth リダイレクト後にユーザーがログインしたら、保留中のアクションを自動実行
+  useEffect(() => {
+    if (!user) return;
+    const pending = sessionStorage.getItem(PENDING_ACTION_KEY);
+    if (!pending) return;
+    sessionStorage.removeItem(PENDING_ACTION_KEY);
+    if (pending === "download") {
+      downloadPdf();
+    } else if (pending === "preview") {
+      setIsPreviewing(true);
+    } else if (pending === "email") {
+      void executeEmailSend();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  const requireAuth = (action: string) => {
+    sessionStorage.setItem(PENDING_ACTION_KEY, action);
+    openAuthModal(window.location.pathname + window.location.search);
+  };
+
   const download = () => {
-    if (!user) { openAuthModal(window.location.pathname + window.location.search); return; }
+    if (!user) { requireAuth("download"); return; }
     downloadPdf();
+  };
+
+  const handlePreview = () => {
+    if (!user) { requireAuth("preview"); return; }
+    setIsPreviewing(true);
   };
 
   const activeFormat = (current?.format ?? format) as ResumeFormat;
@@ -174,8 +202,8 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
     );
   }
 
-  // メール送信（API経由）
-  const handleSendEmail = async () => {
+  // メール送信の実処理（認証済み前提）
+  const executeEmailSend = async () => {
     if (!current.personalInfo.email) {
       alert("基本情報にメールアドレスを入力してください。");
       return;
@@ -209,6 +237,12 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
     } finally {
       setIsEmailSending(false);
     }
+  };
+
+  // auth チェック付きメール送信
+  const handleSendEmail = async () => {
+    if (!user) { requireAuth("email"); return; }
+    await executeEmailSend();
   };
 
   const progress = Math.round(((step - 1) / (STEPS.length - 1)) * 100);
@@ -324,7 +358,7 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
               {step === 6 && activeFormat !== "part_time" && activeFormat !== "no_photo" && <PhotoStep />}
               {step === lastStep && (
                 <ReviewStep
-                  onPreview={() => setIsPreviewing(true)}
+                  onPreview={handlePreview}
                   onDownload={download}
                   isGenerating={isGenerating}
                   onEmailSend={handleSendEmail}
