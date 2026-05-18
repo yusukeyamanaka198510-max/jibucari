@@ -47,6 +47,9 @@ interface ResumeActions {
   setCommute: (value: string) => void;
   setDesiredSalary: (value: string) => void;
 
+  setEducation: (entries: EducationEntry[]) => void;
+  setWorkHistory: (entries: WorkEntry[]) => void;
+
   saveCurrentToList: () => void;
   setAutoSaveStatus: (status: ResumeState["autoSaveStatus"]) => void;
   deleteSaved: (id: string) => void;
@@ -121,6 +124,12 @@ export const useResumeStore = create<ResumeStore>()(
             if (!s.current) return;
             s.current.workHistory = s.current.workHistory.filter((e) => e.id !== id);
           }),
+
+        setEducation: (entries) =>
+          set((s) => { if (s.current) s.current.education = entries; }),
+
+        setWorkHistory: (entries) =>
+          set((s) => { if (s.current) s.current.workHistory = entries; }),
 
         addLicense: (category = "license", name = "") =>
           set((s) => { s.current?.licenses.push(createLicenseEntry(category, name)); }),

@@ -191,6 +191,8 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
       building: pi.building,
       phone: pi.mobilePhone,
       email: pi.email,
+      education: current.education,
+      workHistory: current.workHistory,
     });
   };
 
@@ -211,7 +213,8 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
         }
       } catch { /* フリガナ取得失敗時は空のまま */ }
     }
-    useResumeStore.getState().updatePersonalInfo({
+    const store = useResumeStore.getState();
+    store.updatePersonalInfo({
       lastName: savedProfile.lastName,
       firstName: savedProfile.firstName,
       lastNameKana: savedProfile.lastNameKana,
@@ -226,6 +229,13 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
       mobilePhone: savedProfile.phone,
       email: savedProfile.email,
     });
+    // 学歴・職歴も貼り付け（保存済みデータがある場合のみ）
+    if (savedProfile.education?.length) {
+      store.setEducation(savedProfile.education);
+    }
+    if (savedProfile.workHistory?.length) {
+      store.setWorkHistory(savedProfile.workHistory);
+    }
   };
 
   if (!current) {
