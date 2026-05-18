@@ -12,7 +12,20 @@ import {
   UserPlus,
   Pencil,
 } from "lucide-react";
-import { getAdminStats, getRecentLogs, MOCK_USERS, type ActionLog } from "@/lib/adminMockData";
+import {
+  getAdminStats,
+  getRecentLogs,
+  MOCK_USERS,
+  getUserRegistrationTrend,
+  getAccessTrend,
+  getEducationSegments,
+  type ActionLog,
+} from "@/lib/adminMockData";
+import {
+  UserTrendChart,
+  AccessTrendChart,
+  EducationSegmentChart,
+} from "./DashboardCharts";
 
 export const metadata: Metadata = { title: "ダッシュボード | ジブキャリ管理" };
 
@@ -79,6 +92,9 @@ function ActivityItem({ log }: { log: ActionLog }) {
 export default function AdminDashboardPage() {
   const stats = getAdminStats();
   const recentLogs = getRecentLogs(15);
+  const userTrend = getUserRegistrationTrend();
+  const accessTrend = getAccessTrend();
+  const educationSegments = getEducationSegments();
 
   const statCards = [
     {
@@ -161,6 +177,70 @@ export default function AdminDashboardPage() {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Analytics Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* User registration trend */}
+        <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-100">
+            <h2 className="font-bold text-slate-900 text-sm">ユーザー数の推移</h2>
+            <p className="text-xs text-slate-400 mt-0.5">月別新規登録 / 累計ユーザー数</p>
+          </div>
+          <div className="px-2 pt-2 pb-0 h-48">
+            <UserTrendChart data={userTrend} />
+          </div>
+          <div className="px-5 pb-3 flex items-center gap-4">
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-2 rounded-sm bg-indigo-200" />
+              <span className="text-xs text-slate-400">新規登録</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-4 h-0.5 rounded bg-indigo-600" />
+              <span className="text-xs text-slate-400">累計</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Access count trend */}
+        <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-100">
+            <h2 className="font-bold text-slate-900 text-sm">アクセス数の推移</h2>
+            <p className="text-xs text-slate-400 mt-0.5">月別アクション数（種別スタック）</p>
+          </div>
+          <div className="px-2 pt-2 pb-0 h-48">
+            <AccessTrendChart data={accessTrend} />
+          </div>
+          <div className="px-5 pb-3 flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-sm bg-indigo-500" />
+              <span className="text-xs text-slate-400">PDF</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-sm bg-purple-500" />
+              <span className="text-xs text-slate-400">面談</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-sm bg-emerald-500" />
+              <span className="text-xs text-slate-400">履歴書</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-sm bg-slate-200" />
+              <span className="text-xs text-slate-400">その他</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Education segment */}
+        <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-100">
+            <h2 className="font-bold text-slate-900 text-sm">学歴別セグメント</h2>
+            <p className="text-xs text-slate-400 mt-0.5">ユーザーの最終学歴内訳</p>
+          </div>
+          <div className="px-5 py-5">
+            <EducationSegmentChart data={educationSegments} />
+          </div>
+        </div>
       </div>
 
       {/* Bottom panels */}

@@ -1,6 +1,14 @@
 // Admin dashboard mock data
 // Counts in AdminUser represent all-time totals; action logs show recorded activity.
 
+export type EducationLevel =
+  | "grad"
+  | "uni_national"
+  | "uni_private"
+  | "junior_college"
+  | "vocational"
+  | "high_school";
+
 export interface AdminUser {
   id: string;
   email: string;
@@ -20,6 +28,7 @@ export interface AdminUser {
   pdfEmailCount: number;
   interviewButtonCount: number;
   resumeCount: number;
+  educationLevel: EducationLevel;
 }
 
 export interface AdminEducation {
@@ -103,6 +112,7 @@ export const MOCK_USERS: AdminUser[] = [
     pdfEmailCount: 5,
     interviewButtonCount: 3,
     resumeCount: 2,
+    educationLevel: "uni_national",
   },
   {
     id: "u-002",
@@ -123,6 +133,7 @@ export const MOCK_USERS: AdminUser[] = [
     pdfEmailCount: 2,
     interviewButtonCount: 7,
     resumeCount: 1,
+    educationLevel: "uni_private",
   },
   {
     id: "u-003",
@@ -143,6 +154,7 @@ export const MOCK_USERS: AdminUser[] = [
     pdfEmailCount: 10,
     interviewButtonCount: 2,
     resumeCount: 3,
+    educationLevel: "uni_national",
   },
   {
     id: "u-004",
@@ -163,6 +175,7 @@ export const MOCK_USERS: AdminUser[] = [
     pdfEmailCount: 1,
     interviewButtonCount: 5,
     resumeCount: 1,
+    educationLevel: "uni_national",
   },
   {
     id: "u-005",
@@ -183,6 +196,7 @@ export const MOCK_USERS: AdminUser[] = [
     pdfEmailCount: 8,
     interviewButtonCount: 4,
     resumeCount: 2,
+    educationLevel: "uni_national",
   },
   {
     id: "u-006",
@@ -203,6 +217,7 @@ export const MOCK_USERS: AdminUser[] = [
     pdfEmailCount: 3,
     interviewButtonCount: 1,
     resumeCount: 1,
+    educationLevel: "grad",
   },
   {
     id: "u-007",
@@ -223,6 +238,7 @@ export const MOCK_USERS: AdminUser[] = [
     pdfEmailCount: 0,
     interviewButtonCount: 9,
     resumeCount: 2,
+    educationLevel: "uni_national",
   },
   {
     id: "u-008",
@@ -243,6 +259,7 @@ export const MOCK_USERS: AdminUser[] = [
     pdfEmailCount: 1,
     interviewButtonCount: 0,
     resumeCount: 1,
+    educationLevel: "uni_private",
   },
 ];
 
@@ -659,4 +676,87 @@ export function getActionLogsByUserId(userId: string): ActionLog[] {
   return MOCK_ACTION_LOGS
     .filter((l) => l.userId === userId)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+// ── Chart Data Helpers ────────────────────────────────────────────────────────
+
+export interface MonthlyUserPoint {
+  month: string; // "YYYY-MM"
+  new: number;
+  cumulative: number;
+}
+
+export interface MonthlyAccessPoint {
+  month: string;
+  total: number;
+  pdf: number;
+  interview: number;
+  resume: number;
+}
+
+export interface EduSegment {
+  key: string;
+  label: string;
+  count: number;
+  percent: number;
+  color: string;
+}
+
+const CHART_MONTHS = ["2024-10", "2024-11", "2024-12", "2025-01", "2025-02"];
+
+export function getUserRegistrationTrend(): MonthlyUserPoint[] {
+  let cumulative = 0;
+  return CHART_MONTHS.map((m) => {
+    const newCount = MOCK_USERS.filter((u) => u.registeredAt.startsWith(m)).length;
+    cumulative += newCount;
+    return { month: m, new: newCount, cumulative };
+  });
+}
+
+export function getAccessTrend(): MonthlyAccessPoint[] {
+  return CHART_MONTHS.map((m) => {
+    const logs = MOCK_ACTION_LOGS.filter((l) => l.createdAt.startsWith(m));
+    return {
+      month: m,
+      total: logs.length,
+      pdf: logs.filter((l) => l.action === "pdf_download" || l.action === "pdf_email").length,
+      interview: logs.filter((l) => l.action === "interview_request").length,
+      resume: logs.filter((l) => l.action === "resume_created" || l.action === "resume_updated").length,
+    };
+  });
+}
+
+const EDU_LABELS: Record<string, string> = {
+  grad: "大学院",
+  uni_national: "大学（国公立）",
+  uni_private: "大学（私立）",
+  junior_college: "短大",
+  vocational: "専門学校",
+  high_school: "高校・その他",
+};
+
+const EDU_COLORS: Record<string, string> = {
+  grad: "#6366f1",
+  uni_national: "#8b5cf6",
+  uni_private: "#06b6d4",
+  junior_college: "#10b981",
+  vocational: "#f59e0b",
+  high_school: "#f43f5e",
+};
+
+export function getEducationSegments(): EduSegment[] {
+  const counts: Record<string, number> = {};
+  for (const u of MOCK_USERS) {
+    counts[u.educationLevel] = (counts[u.educationLevel] || 0) + 1;
+  }
+  const total = MOCK_USERS.length;
+  return Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([key, count]) => ({
+      key,
+      label: EDU_LABELS[key] ?? key,
+      count,
+      percent: Math.round((count / total) * 100),
+      color: EDU_COLORS[key] ?? "#94a3b8",
+    }));
 }
