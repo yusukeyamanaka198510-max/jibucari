@@ -329,13 +329,17 @@ export default function HomePage() {
                 <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mb-3 leading-snug">
                   登録情報をもとに<br className="sm:hidden" />スカウトが届くかも。
                 </h2>
-                <p className="text-slate-500 text-sm sm:text-base leading-relaxed mb-6">
+                <p className="text-slate-500 text-sm sm:text-base leading-relaxed mb-4">
                   プロフィールを登録すると、ジブキャリのキャリアアドバイザーが内容を確認。あなたの経験・スキルに合った求人や面談のご案内が届く可能性があります。<br />
                   <span className="font-semibold text-indigo-600">履歴書を作るだけで、チャンスが広がります。</span>
+                </p>
+                <p className="text-slate-500 text-sm sm:text-base leading-relaxed mb-6">
+                  また、ジブキャリでは厳選した<span className="font-semibold text-slate-700">優良おすすめ企業</span>もご紹介しています。成長中のスタートアップから大手企業まで、働きやすさ・待遇・文化を徹底リサーチした求人を掲載。あなたのキャリアに本当にマッチする企業との出会いをサポートします。
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 mb-7">
                   {[
                     { icon: "📬", text: "非公開求人のご案内" },
+                    { icon: "🏢", text: "優良企業を厳選紹介" },
                     { icon: "🤝", text: "キャリア相談も無料" },
                     { icon: "🔒", text: "プロフィールは非公開" },
                   ].map((item) => (

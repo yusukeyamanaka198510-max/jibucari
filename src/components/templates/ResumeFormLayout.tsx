@@ -23,6 +23,8 @@ import { cn } from "@/lib/utils";
 import type { ResumeFormat } from "@/types";
 import { ProfileSyncBar } from "@/components/molecules/ProfileSyncBar";
 import { useProfileStore } from "@/store/profileStore";
+import { useAuthStore } from "@/store/authStore";
+import { AuthModal } from "@/components/organisms/AuthModal";
 
 interface ResumeFormLayoutProps {
   format?: ResumeFormat;
@@ -81,7 +83,14 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
   const [isEmailSending, setIsEmailSending] = useState(false);
   const [emailSent, setEmailSent]   = useState(false);
 
-  const { download, isGenerating } = usePdfDownload(current);
+  const { user, openAuthModal } = useAuthStore();
+  const { download: downloadPdf, isGenerating } = usePdfDownload(current);
+
+  const download = () => {
+    if (!user) { openAuthModal(window.location.pathname + window.location.search); return; }
+    downloadPdf();
+  };
+
   const activeFormat = (current?.format ?? format) as ResumeFormat;
   const STEPS = buildSteps(activeFormat);
   const lastStep = STEPS[STEPS.length - 1]?.id ?? STEPS.length;
@@ -206,6 +215,7 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
 
   return (
     <>
+      <AuthModal />
       <div className="min-h-screen bg-slate-50">
         {/* ── スティッキーヘッダー ── */}
         <header className="sticky top-0 z-40 bg-white border-b border-slate-100 shadow-sm">
