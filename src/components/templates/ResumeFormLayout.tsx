@@ -74,11 +74,23 @@ function buildSteps(format: ResumeFormat): StepDef[] {
   return base;
 }
 
+const PENDING_ACTION_KEY = "jibucari_pending_action";
+const PENDING_STEP_KEY   = "jibucari_pending_step";
+
 export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutProps) {
   const initNew = useResumeStore((s) => s.initNew);
   const current = useResumeStore((s) => s.current);
   const saved   = useResumeStore((s) => s.saved);
-  const [step, setStep]             = useState(1);
+
+  // OAuth後にステップを復元するため lazy initialization で sessionStorage を読む
+  const [step, setStep] = useState(() => {
+    if (typeof window !== "undefined") {
+      const s = sessionStorage.getItem(PENDING_STEP_KEY);
+      if (s) return parseInt(s, 10);
+    }
+    return 1;
+  });
+
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isEmailSending, setIsEmailSending] = useState(false);
   const [emailSent, setEmailSent]   = useState(false);
@@ -86,14 +98,13 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
   const { user, openAuthModal } = useAuthStore();
   const { download: downloadPdf, isGenerating } = usePdfDownload(current);
 
-  const PENDING_ACTION_KEY = "jibucari_pending_action";
-
   // OAuth リダイレクト後にユーザーがログインしたら、保留中のアクションを自動実行
   useEffect(() => {
     if (!user) return;
     const pending = sessionStorage.getItem(PENDING_ACTION_KEY);
     if (!pending) return;
     sessionStorage.removeItem(PENDING_ACTION_KEY);
+    sessionStorage.removeItem(PENDING_STEP_KEY);
     if (pending === "download") {
       downloadPdf();
     } else if (pending === "preview") {
@@ -106,6 +117,7 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
 
   const requireAuth = (action: string) => {
     sessionStorage.setItem(PENDING_ACTION_KEY, action);
+    sessionStorage.setItem(PENDING_STEP_KEY, String(step));
     openAuthModal(window.location.pathname + window.location.search);
   };
 
@@ -131,6 +143,8 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
         return;
       }
     }
+    // OAuth リダイレクト後（pendingAction あり）はデータを保持するため initNew をスキップ
+    if (sessionStorage.getItem(PENDING_ACTION_KEY)) return;
     // 新規作成時は常に指定フォーマットで初期化（前回の残留データを上書き）
     initNew(format);
   // eslint-disable-next-line react-hooks/exhaustive-deps
