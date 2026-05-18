@@ -3,8 +3,8 @@ import type { MonthlyUserPoint, MonthlyAccessPoint, EduSegment } from "@/lib/adm
 // ── Utility ───────────────────────────────────────────────────────────────────
 
 function fmtMonth(m: string) {
-  const parts = m.split("-");
-  return `${parseInt(parts[1])}月`;
+  const mo = m.split("-")[1] ?? "0";
+  return `${parseInt(mo)}月`;
 }
 
 // ── User Registration Trend (line + bar combo) ────────────────────────────────
