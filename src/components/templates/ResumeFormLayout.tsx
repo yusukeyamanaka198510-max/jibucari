@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, createElement } from "react";
+import { useEffect, useRef, useState, useCallback, createElement } from "react";
 import { pdf } from "@react-pdf/renderer";
 import { useResumeStore } from "@/store/resumeStore";
 import { useAutoSave } from "@/hooks/useAutoSave";
@@ -25,6 +25,7 @@ import { ProfileSyncBar } from "@/components/molecules/ProfileSyncBar";
 import { useProfileStore } from "@/store/profileStore";
 import { useAuthStore } from "@/store/authStore";
 import { AuthModal } from "@/components/organisms/AuthModal";
+import { ConsultationSheet } from "@/components/organisms/ConsultationSheet";
 
 interface ResumeFormLayoutProps {
   format?: ResumeFormat;
@@ -94,9 +95,27 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isEmailSending, setIsEmailSending] = useState(false);
   const [emailSent, setEmailSent]   = useState(false);
+  const [showConsultSheet, setShowConsultSheet] = useState(false);
 
   const { user, openAuthModal } = useAuthStore();
   const { download: downloadPdf, isGenerating } = usePdfDownload(current);
+
+  // Supabase への自動保存（ログイン中のみ）
+  const currentRef = useRef(current);
+  useEffect(() => { currentRef.current = current; }, [current]);
+
+  const saveResumeToSupabase = useCallback(async (_id: string) => {
+    if (!user) return;
+    const resume = currentRef.current;
+    if (!resume) return;
+    try {
+      await fetch(`/api/resume/${resume.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...resume, userId: user.id }),
+      });
+    } catch { /* サイレントフェイル */ }
+  }, [user]);
 
   // OAuth リダイレクト後にユーザーがログインしたら、保留中のアクションを自動実行
   useEffect(() => {
@@ -121,9 +140,10 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
     openAuthModal(window.location.pathname + window.location.search);
   };
 
-  const download = () => {
+  const download = async () => {
     if (!user) { requireAuth("download"); return; }
-    downloadPdf();
+    await downloadPdf();
+    setShowConsultSheet(true);
   };
 
   const handlePreview = () => {
@@ -150,7 +170,7 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useAutoSave();
+  useAutoSave(user ? saveResumeToSupabase : undefined);
 
   const { saveProfile, profile: savedProfile } = useProfileStore();
 
@@ -419,6 +439,14 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
         resume={current}
         isOpen={isPreviewing}
         onClose={() => setIsPreviewing(false)}
+      />
+
+      <ConsultationSheet
+        open={showConsultSheet}
+        onClose={() => setShowConsultSheet(false)}
+        name={`${current.personalInfo.lastName}${current.personalInfo.firstName}`}
+        email={current.personalInfo.email ?? ""}
+        phone={current.personalInfo.mobilePhone ?? ""}
       />
     </>
   );
