@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { NavUser } from "@/components/molecules/NavUser";
+import { ScoutButton } from "@/components/molecules/ScoutButton";
 
 /* ─── データ定義 ──────────────────────────────────────────── */
 const BENEFITS = [
@@ -349,12 +350,7 @@ export default function HomePage() {
                     </div>
                   ))}
                 </div>
-                <Link
-                  href="/register"
-                  className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold px-8 py-3.5 rounded-2xl shadow-lg shadow-indigo-300/50 hover:shadow-indigo-400/60 hover:scale-105 transition-all duration-200"
-                >
-                  ✦ 無料で登録してスカウトを待つ
-                </Link>
+                <ScoutButton />
               </div>
             </div>
           </div>
