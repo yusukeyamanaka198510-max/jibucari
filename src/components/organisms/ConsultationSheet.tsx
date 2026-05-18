@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { X, CalendarDays, CheckCircle2 } from "lucide-react";
+import { useAuthStore } from "@/store/authStore";
 
 const CONSULTATION_TOPICS = [
   { value: "job_hunting",    label: "就職活動の進め方" },
@@ -25,6 +26,7 @@ interface ConsultationSheetProps {
  * ResumeFormLayout・PdfPreviewModal など各所から共通利用。
  */
 export function ConsultationSheet({ open, onClose, name = "", email = "", phone = "" }: ConsultationSheetProps) {
+  const { user, openAuthModal } = useAuthStore();
   const [date1, setDate1] = useState({ date: "", hour: "10" });
   const [date2, setDate2] = useState({ date: "", hour: "10" });
   const [date3, setDate3] = useState({ date: "", hour: "10" });
@@ -40,6 +42,11 @@ export function ConsultationSheet({ open, onClose, name = "", email = "", phone 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // 未ログインの場合は会員登録モーダルを表示
+    if (!user) {
+      openAuthModal(typeof window !== "undefined" ? window.location.pathname + window.location.search : "/");
+      return;
+    }
     if (!date1.date) { setSendError("第一希望日を入力してください。"); return; }
     setIsSending(true);
     setSendError("");
