@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { NavUser } from "@/components/molecules/NavUser";
 import { ScoutButton } from "@/components/molecules/ScoutButton";
+import { AiSupportButton } from "@/components/molecules/AiSupportButton";
 
 /* ─── データ定義 ──────────────────────────────────────────── */
 const BENEFITS = [
@@ -152,6 +153,7 @@ export default function HomePage() {
                 >
                   ✦ 今すぐ無料でつくる
                 </Link>
+                <AiSupportButton />
                 <a
                   href="#how"
                   className="w-full sm:w-auto inline-flex items-center justify-center text-slate-300 font-semibold text-base px-7 py-4 rounded-2xl border border-white/15 hover:border-white/30 hover:text-white transition-colors"
