@@ -83,11 +83,15 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
   const current = useResumeStore((s) => s.current);
   const saved   = useResumeStore((s) => s.saved);
 
-  // OAuth後にステップを復元するため lazy initialization で sessionStorage を読む
+  // OAuth後 or URLパラメータ(?step=N)でステップを復元する lazy initialization
   const [step, setStep] = useState(() => {
     if (typeof window !== "undefined") {
-      const s = sessionStorage.getItem(PENDING_STEP_KEY);
-      if (s) return parseInt(s, 10);
+      // sessionStorage（OAuth後の復元）を優先
+      const ss = sessionStorage.getItem(PENDING_STEP_KEY);
+      if (ss) return parseInt(ss, 10);
+      // URLパラメータ ?step=N で直接ステップ指定
+      const sp = new URLSearchParams(window.location.search).get("step");
+      if (sp) return parseInt(sp, 10);
     }
     return 1;
   });
