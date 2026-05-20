@@ -9,7 +9,7 @@ import Link from "next/link";
 export function AiSupportButton() {
   return (
     <Link
-      href="/resume/new?format=career_change&step=5"
+      href="/ai-support"
       className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white/10 backdrop-blur-sm text-white font-bold text-base px-8 py-4 rounded-2xl border border-white/30 hover:bg-white/20 hover:border-white/50 transition-all duration-200"
     >
       🤝 AIサポートを受ける
