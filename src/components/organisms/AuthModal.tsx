@@ -8,6 +8,7 @@ import { useAuthStore } from "@/store/authStore";
 export function AuthModal() {
   const { authModalOpen, authModalRedirectTo, closeAuthModal, signInWithGoogle, isLoading } = useAuthStore();
   const [agreed, setAgreed] = useState(false);
+  const [scoutOptIn, setScoutOptIn] = useState(true);
   const [showError, setShowError] = useState(false);
 
   if (!authModalOpen) return null;
@@ -43,24 +44,41 @@ export function AuthModal() {
           </p>
         </div>
 
-        {/* 利用規約チェック */}
-        <label className="flex items-start gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={agreed}
-            onChange={(e) => { setAgreed(e.target.checked); setShowError(false); }}
-            className="mt-0.5 h-4 w-4 rounded border-slate-300 accent-indigo-600"
-          />
-          <span className="text-xs text-slate-600 leading-relaxed">
-            <Link href="/terms" target="_blank" className="text-indigo-600 underline">利用規約</Link>
-            {" "}および{" "}
-            <Link href="/privacy" target="_blank" className="text-indigo-600 underline">プライバシーポリシー</Link>
-            {" "}に同意します
-          </span>
-        </label>
-        {showError && (
-          <p className="text-xs text-red-500 -mt-4">利用規約への同意が必要です</p>
-        )}
+        {/* チェックボックス群 */}
+        <div className="space-y-3">
+          {/* 利用規約チェック */}
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={agreed}
+              onChange={(e) => { setAgreed(e.target.checked); setShowError(false); }}
+              className="mt-0.5 h-4 w-4 rounded border-slate-300 accent-indigo-600"
+            />
+            <span className="text-xs text-slate-600 leading-relaxed">
+              <Link href="/terms" target="_blank" className="text-indigo-600 underline">利用規約</Link>
+              {" "}および{" "}
+              <Link href="/privacy" target="_blank" className="text-indigo-600 underline">プライバシーポリシー</Link>
+              {" "}に同意します <span className="text-red-400">*</span>
+            </span>
+          </label>
+          {showError && (
+            <p className="text-xs text-red-500 pl-7">利用規約への同意が必要です</p>
+          )}
+
+          {/* スカウト・お役立ち情報の受け取り */}
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={scoutOptIn}
+              onChange={(e) => setScoutOptIn(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-slate-300 accent-indigo-600"
+            />
+            <span className="text-xs text-slate-600 leading-relaxed">
+              ジブキャリからの優良企業スカウト・求人情報・転職お役立ち情報を受け取る
+              <span className="ml-1 text-[10px] text-slate-400">（任意）</span>
+            </span>
+          </label>
+        </div>
 
         {/* Googleボタン */}
         <button

@@ -242,7 +242,7 @@ export function PersonalInfoSection({ className }: { className?: string }) {
         </FormField>
 
         <FormField id="addressKana" label="住所（フリガナ）">
-          <Input id="addressKana" value={info.addressKana} onChange={(e) => field("addressKana")(e.target.value)} placeholder="トウキョウトシブヤク〇〇" />
+          <Input id="addressKana" value={info.addressKana} onChange={(e) => field("addressKana")(e.target.value)} placeholder="とうきょうとしぶやく〇〇" />
         </FormField>
       </div>
 
