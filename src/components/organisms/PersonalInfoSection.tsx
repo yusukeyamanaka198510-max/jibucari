@@ -25,9 +25,9 @@ const GENDER_OPTIONS: { value: Gender; label: string }[] = [
   { value: "prefer_not_to_say", label: "回答しない" },
 ];
 
-// ひらがな → カタカナ変換
-const toKatakana = (str: string) =>
-  str.replace(/[ぁ-ゖ]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0x60));
+// カタカナ → ひらがな変換（郵便番号APIの結果用）
+const toHiragana = (str: string) =>
+  str.replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
 
 async function lookupPostalCode(digits: string): Promise<{ prefecture: string; city: string; kana: string } | null> {
   try {
@@ -73,7 +73,8 @@ export function PersonalInfoSection({ className }: { className?: string }) {
 
   const makeKanaHandlers = (kanaKey: "lastNameKana" | "firstNameKana") => ({
     onCompositionUpdate: (e: React.CompositionEvent<HTMLInputElement>) => {
-      if (isKanaOnly(e.data)) lastKanaRef.current = toKatakana(e.data);
+      // ひらがな・カタカナのみの場合、ひらがなのまま保持
+      if (isKanaOnly(e.data)) lastKanaRef.current = toHiragana(e.data);
     },
     onCompositionEnd: () => {
       if (lastKanaRef.current) {
@@ -97,7 +98,7 @@ export function PersonalInfoSection({ className }: { className?: string }) {
       setIsLooking(false);
       if (result) {
         const cleanKana = (s: string) => s.replace(/([ァ-ヴ])゛/g, "$1").replace(/([ァ-ヴ])゜/g, "$1");
-        const kana = cleanKana(result.kana);
+        const kana = toHiragana(cleanKana(result.kana));
         setZipKana(kana);
         updatePersonalInfo({ prefecture: result.prefecture, city: result.city, addressKana: kana });
         setLookupDone(true);
@@ -133,20 +134,20 @@ export function PersonalInfoSection({ className }: { className?: string }) {
             {...makeKanaHandlers("firstNameKana")}
           />
         </FormField>
-        <FormField id="lastNameKana" label="姓（フリガナ）" required hint="漢字入力で自動入力されます">
+        <FormField id="lastNameKana" label="姓（ふりがな）" required hint="漢字入力で自動入力されます">
           <Input
             id="lastNameKana"
             value={info.lastNameKana}
             onChange={(e) => field("lastNameKana")(e.target.value)}
-            placeholder="ヤマダ"
+            placeholder="やまだ"
           />
         </FormField>
-        <FormField id="firstNameKana" label="名（フリガナ）" required hint="漢字入力で自動入力されます">
+        <FormField id="firstNameKana" label="名（ふりがな）" required hint="漢字入力で自動入力されます">
           <Input
             id="firstNameKana"
             value={info.firstNameKana}
             onChange={(e) => field("firstNameKana")(e.target.value)}
-            placeholder="タロウ"
+            placeholder="たろう"
           />
         </FormField>
       </div>
@@ -228,7 +229,7 @@ export function PersonalInfoSection({ className }: { className?: string }) {
             onChange={(e) => updatePersonalInfo({ building: e.target.value })}
             placeholder="〇〇マンション 101号室"
             onCompositionStart={() => { isComposingBuildingRef.current = true; }}
-            onCompositionUpdate={(e) => { lastKanaRef.current = toKatakana(e.data); }}
+            onCompositionUpdate={(e) => { lastKanaRef.current = toHiragana(e.data); }}
             onCompositionEnd={() => {
               isComposingBuildingRef.current = false;
               if (lastKanaRef.current) {

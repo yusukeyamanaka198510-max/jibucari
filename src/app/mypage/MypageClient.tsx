@@ -15,9 +15,9 @@ import { BirthDatePicker } from "@/components/molecules/BirthDatePicker";
 import type { UserProfileData } from "@/infrastructure/supabase/profileRepository";
 import type { EducationEntry, EducationEntryType, EducationExitType, WorkEntry } from "@/types";
 
-// ひらがな → カタカナ変換
-const toKatakana = (str: string) =>
-  str.replace(/[ぁ-ゖ]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0x60));
+// カタカナ → ひらがな変換
+const toHiragana = (str: string) =>
+  str.replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
 
 async function lookupPostalCode(digits: string): Promise<{ prefecture: string; city: string } | null> {
   try {
@@ -117,7 +117,7 @@ export function MypageClient({ userId, userEmail, initialProfile }: MypageClient
     const isKanaOnly = (str: string) => /^[ぁ-ゖァ-ヶーｦ-ﾟ\s]+$/.test(str);
     return {
       onCompositionUpdate: (e: React.CompositionEvent<HTMLInputElement>) => {
-        if (isKanaOnly(e.data)) lastKanaRef.current = toKatakana(e.data);
+        if (isKanaOnly(e.data)) lastKanaRef.current = toHiragana(e.data);
       },
       onCompositionEnd: () => {
         if (lastKanaRef.current) {
@@ -258,8 +258,8 @@ export function MypageClient({ userId, userEmail, initialProfile }: MypageClient
                 <div className="grid grid-cols-2 gap-3">
                   <Field label="姓" value={profile.lastName} onChange={(v) => handleChange("lastName", v)} placeholder="山田" extraProps={makeKanaHandlers("lastNameKana")} />
                   <Field label="名" value={profile.firstName} onChange={(v) => handleChange("firstName", v)} placeholder="太郎" extraProps={makeKanaHandlers("firstNameKana")} />
-                  <Field label="せい（カナ）" value={profile.lastNameKana} onChange={(v) => handleChange("lastNameKana", v)} placeholder="ヤマダ" hint="漢字入力で自動入力" />
-                  <Field label="めい（カナ）" value={profile.firstNameKana} onChange={(v) => handleChange("firstNameKana", v)} placeholder="タロウ" hint="漢字入力で自動入力" />
+                  <Field label="せい（ふりがな）" value={profile.lastNameKana} onChange={(v) => handleChange("lastNameKana", v)} placeholder="やまだ" hint="漢字入力で自動入力" />
+                  <Field label="めい（ふりがな）" value={profile.firstNameKana} onChange={(v) => handleChange("firstNameKana", v)} placeholder="たろう" hint="漢字入力で自動入力" />
                 </div>
               ) : (
                 <div className="space-y-1">
@@ -564,9 +564,10 @@ function EducationEntryEditor({
     { value: "transferred_in", label: "転入" },
   ];
   const EXIT_OPTIONS: { value: EducationExitType; label: string }[] = [
-    { value: "graduated", label: "卒業" },
-    { value: "dropped_out", label: "中退" },
-    { value: "transferred", label: "転学" },
+    { value: "graduated",    label: "卒業" },
+    { value: "transferred",  label: "転学" },
+    { value: "study_abroad", label: "留学" },
+    { value: "dropped_out",  label: "中退" },
   ];
 
   return (

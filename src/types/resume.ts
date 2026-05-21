@@ -9,7 +9,7 @@ export type ResumeFormat =
 // ─── 選択肢型 ─────────────────────────────────────────────────────────────────
 export type Gender = "male" | "female" | "other" | "prefer_not_to_say";
 export type EducationEntryType = "enrolled" | "transferred_in";
-export type EducationExitType = "graduated" | "dropped_out" | "transferred";
+export type EducationExitType = "graduated" | "dropped_out" | "transferred" | "study_abroad";
 export type DocumentType = "resume" | "cv" | "cover_letter" | "resignation" | "skill_sheet";
 
 // ─── 基本情報 ─────────────────────────────────────────────────────────────────

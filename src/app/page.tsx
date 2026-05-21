@@ -3,6 +3,7 @@ import Image from "next/image";
 import { NavUser } from "@/components/molecules/NavUser";
 import { ScoutButton } from "@/components/molecules/ScoutButton";
 import { AiSupportButton } from "@/components/molecules/AiSupportButton";
+import { GlobalNav } from "@/components/molecules/GlobalNav";
 
 /* ─── データ定義 ──────────────────────────────────────────── */
 const BENEFITS = [
@@ -100,7 +101,7 @@ export default function HomePage() {
           <span className="font-black text-xl tracking-tight bg-gradient-to-r from-indigo-600 to-violet-500 bg-clip-text text-transparent">
             ジブキャリ
           </span>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <NavUser />
             <Link
               href="/resume/new"
@@ -108,6 +109,7 @@ export default function HomePage() {
             >
               無料でつくる →
             </Link>
+            <GlobalNav />
           </div>
         </div>
       </nav>
