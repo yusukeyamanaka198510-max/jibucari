@@ -58,15 +58,20 @@ export function PersonalInfoSection({ className }: { className?: string }) {
   const [zipKana, setZipKana] = useState(
     () => info?.addressKana.match(/^[^\d]*/)?.[0] ?? ""
   );
-  const isComposingBuildingRef = useRef(false);
 
-  // IME composition でフリガナを自動取得
+  // IME composition でフリガナを自動取得（氏名用）
   const lastKanaRef = useRef("");
 
   if (!info) return null;
 
   const field = (key: keyof typeof info) =>
     (value: string) => updatePersonalInfo({ [key]: value });
+
+  // 住所フリガナを再構築: 都道府県市区町村(zip) + 番地 + 建物(カタカナ→ひらがな変換)
+  const buildAddressKana = (street: string, building: string, zip = zipKana) => {
+    const parts = [zip + street, toHiragana(building)].filter((s) => s.trim());
+    return parts.join(" ").trim();
+  };
 
   // IME入力中の「かな」だけを拾う（漢字変換後は無視）
   const isKanaOnly = (str: string) => /^[ぁ-ゖァ-ヶーｦ-ﾟ\s]+$/.test(str);
@@ -100,7 +105,11 @@ export function PersonalInfoSection({ className }: { className?: string }) {
         const cleanKana = (s: string) => s.replace(/([ァ-ヴ])゛/g, "$1").replace(/([ァ-ヴ])゜/g, "$1");
         const kana = toHiragana(cleanKana(result.kana));
         setZipKana(kana);
-        updatePersonalInfo({ prefecture: result.prefecture, city: result.city, addressKana: kana });
+        updatePersonalInfo({
+          prefecture: result.prefecture,
+          city: result.city,
+          addressKana: buildAddressKana(info.streetAddress, info.building, kana),
+        });
         setLookupDone(true);
       } else {
         setLookupError("住所が見つかりませんでした");
@@ -215,8 +224,7 @@ export function PersonalInfoSection({ className }: { className?: string }) {
             value={info.streetAddress}
             onChange={(e) => {
               const val = e.target.value;
-              // zipKana + 新しい番地で住所フリガナを再構築（上書き）
-              updatePersonalInfo({ streetAddress: val, addressKana: zipKana + val });
+              updatePersonalInfo({ streetAddress: val, addressKana: buildAddressKana(val, info.building) });
             }}
             placeholder="1-2-3"
           />
@@ -226,19 +234,13 @@ export function PersonalInfoSection({ className }: { className?: string }) {
           <Input
             id="building"
             value={info.building}
-            onChange={(e) => updatePersonalInfo({ building: e.target.value })}
-            placeholder="〇〇マンション 101号室"
-            onCompositionStart={() => { isComposingBuildingRef.current = true; }}
-            onCompositionUpdate={(e) => { lastKanaRef.current = toHiragana(e.data); }}
-            onCompositionEnd={() => {
-              isComposingBuildingRef.current = false;
-              if (lastKanaRef.current) {
-                updatePersonalInfo({ addressKana: (info.addressKana + " " + lastKanaRef.current).trim() });
-                lastKanaRef.current = "";
-              }
+            onChange={(e) => {
+              const val = e.target.value;
+              updatePersonalInfo({ building: val, addressKana: buildAddressKana(info.streetAddress, val) });
             }}
+            placeholder="〇〇マンション 101号室"
           />
-          <p className="text-xs text-slate-400 mt-1">建物名・部屋番号のフリガナは下の欄に直接追記できます</p>
+          <p className="text-xs text-slate-400 mt-1">カタカナはひらがなに変換して住所フリガナに自動反映されます</p>
         </FormField>
 
         <FormField id="addressKana" label="住所（フリガナ）">
