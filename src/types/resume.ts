@@ -4,7 +4,8 @@ export type ResumeFormat =
   | "career_change" // 転職用
   | "new_graduate"  // 新卒用
   | "part_time"     // アルバイト用
-  | "no_photo";     // 写真なし（WEB応募向け）
+  | "no_photo"      // 写真なし（WEB応募向け）
+  | "ai_draft";     // AI生成テキスト保存用
 
 // ─── 選択肢型 ─────────────────────────────────────────────────────────────────
 export type Gender = "male" | "female" | "other" | "prefer_not_to_say";

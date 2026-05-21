@@ -15,6 +15,8 @@ import {
   Clock,
   Printer,
   Mail,
+  Sparkles,
+  ArrowRight,
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { useResumeStore } from "@/store/resumeStore";
@@ -28,6 +30,7 @@ const FORMAT_LABELS: Record<string, string> = {
   career_change: "転職用",
   new_graduate: "新卒用",
   part_time: "アルバイト用",
+  ai_draft: "AI生成",
 };
 
 interface ResumeCardProps {
@@ -131,6 +134,44 @@ function ResumeCard({ resume, onDelete }: ResumeCardProps) {
   );
 }
 
+function AiDraftCard({ draft, onDelete }: { draft: Resume; onDelete: (id: string) => void }) {
+  const setMotivation = useResumeStore((s) => s.setMotivation);
+  const setSelfPR = useResumeStore((s) => s.setSelfPR);
+  const router = useRouter();
+
+  const text = draft.motivation || draft.selfPR;
+
+  const handleApply = (target: "motivation" | "selfPR") => {
+    if (target === "motivation") setMotivation(text);
+    else setSelfPR(text);
+    router.push("/resume/new?step=5");
+  };
+
+  return (
+    <article className="rounded-xl border border-indigo-100 bg-indigo-50/30 p-4 space-y-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <Sparkles className="h-4 w-4 text-indigo-500 shrink-0" />
+          <p className="text-sm font-semibold text-slate-800 truncate">{draft.title}</p>
+        </div>
+        <Badge variant="secondary" className="shrink-0 text-indigo-600 bg-indigo-100 border-0">AI生成</Badge>
+      </div>
+      <p className="text-xs text-slate-500 line-clamp-3 leading-relaxed">{text}</p>
+      <div className="flex gap-2 flex-wrap pt-1">
+        <Button variant="outline" size="sm" onClick={() => handleApply("motivation")} className="text-xs gap-1 text-indigo-600 border-indigo-200 hover:bg-indigo-50">
+          <ArrowRight className="h-3 w-3" />志望動機に引用
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => handleApply("selfPR")} className="text-xs gap-1 text-indigo-600 border-indigo-200 hover:bg-indigo-50">
+          <ArrowRight className="h-3 w-3" />自己PRに引用
+        </Button>
+        <Button variant="ghost" size="sm" onClick={() => onDelete(draft.id)} className="text-muted-foreground hover:text-destructive ml-auto">
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    </article>
+  );
+}
+
 interface DashboardClientProps {
   initialResumes: Resume[];
   userEmail: string;
@@ -144,7 +185,12 @@ export function DashboardClient({ initialResumes, userEmail }: DashboardClientPr
   const router = useRouter();
   const { signOut, isLoading: isSigningOut } = useAuthStore();
   const deleteSaved = useResumeStore((s) => s.deleteSaved);
-  const [resumes, setResumes] = useState<Resume[]>(initialResumes);
+  const [resumes, setResumes] = useState<Resume[]>(
+    initialResumes.filter((r) => r.format !== "ai_draft")
+  );
+  const [aiDrafts, setAiDrafts] = useState<Resume[]>(
+    initialResumes.filter((r) => r.format === "ai_draft")
+  );
 
   const handleSignOut = async () => {
     await signOut();
@@ -158,6 +204,7 @@ export function DashboardClient({ initialResumes, userEmail }: DashboardClientPr
       await fetch(`/api/resume/${id}`, { method: "DELETE" });
       deleteSaved(id);
       setResumes((prev) => prev.filter((r) => r.id !== id));
+      setAiDrafts((prev) => prev.filter((r) => r.id !== id));
     } catch {
       alert("削除に失敗しました。");
     }
@@ -228,6 +275,22 @@ export function DashboardClient({ initialResumes, userEmail }: DashboardClientPr
             {resumes.map((resume) => (
               <ResumeCard key={resume.id} resume={resume} onDelete={handleDelete} />
             ))}
+          </div>
+        )}
+
+        {aiDrafts.length > 0 && (
+          <div className="space-y-4 mt-8">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-indigo-500" />
+              <h2 className="text-lg font-bold">AI生成テキスト</h2>
+              <span className="text-sm text-muted-foreground">（{aiDrafts.length}件）</span>
+            </div>
+            <p className="text-xs text-slate-500">AIサポートで生成・保存したテキストです。履歴書の志望動機・自己PRに引用できます。</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {aiDrafts.map((draft) => (
+                <AiDraftCard key={draft.id} draft={draft} onDelete={handleDelete} />
+              ))}
+            </div>
           </div>
         )}
       </main>

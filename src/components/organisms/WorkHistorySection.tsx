@@ -30,6 +30,7 @@ const FORMAT_WORK_CONFIG: Record<ResumeFormat, { heading: string; noWorkLabel: s
   new_graduate:  { heading: "アルバイト・インターン経験", noWorkLabel: "経験なし",             addLabel: "経験を追加",           indexPrefix: "経験", hint: "アルバイトやインターンの経験があれば記載してください。なければ「経験なし」を選択してください。" },
   part_time:     { heading: "アルバイト・パート歴", noWorkLabel: "アルバイト経験なし",         addLabel: "アルバイト歴を追加",   indexPrefix: "経験", hint: "過去のアルバイト・パート経験を記載してください。接客・販売経験などがあればアピールになります。" },
   no_photo:      { heading: "職歴",               noWorkLabel: "職歴なし（新卒など）",         addLabel: "職歴を追加",           indexPrefix: "職歴" },
+  ai_draft:      { heading: "職歴",               noWorkLabel: "職歴なし",                     addLabel: "職歴を追加",           indexPrefix: "職歴" },
 };
 
 export function WorkHistorySection({ className, format = "jis" }: { className?: string; format?: ResumeFormat }) {

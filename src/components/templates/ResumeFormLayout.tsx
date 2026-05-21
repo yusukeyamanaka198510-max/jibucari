@@ -38,6 +38,7 @@ const FORMAT_LABELS: Record<ResumeFormat, string> = {
   new_graduate: "新卒履歴書",
   part_time: "アルバイト履歴書",
   no_photo: "写真なし履歴書",
+  ai_draft: "AI生成テキスト",
 };
 
 type StepDef = { id: number; label: string; short: string };

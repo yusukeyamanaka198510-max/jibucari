@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Sparkles, Loader2 } from "lucide-react";
+import { Sparkles, Loader2, ClipboardList } from "lucide-react";
 import { useResumeStore } from "@/store/resumeStore";
+import { useAuthStore } from "@/store/authStore";
 import { FormField } from "@/components/molecules/FormField";
 import { Textarea } from "@/components/atoms/Textarea";
 import { cn } from "@/lib/utils";
@@ -11,22 +12,21 @@ import type { ResumeFormat } from "@/types";
 const MAX_CHARS = 400;
 
 // フォーマット別フィールド定義
-const FORMAT_CONFIG: Record<
-  ResumeFormat,
-  {
-    heading: string;
-    field1Label: string;
-    field1Key: "motivation" | "selfPR";
-    field1Placeholder: string;
-    field1CanGenerate: boolean;
-    field2Label: string;
-    field2Key: "motivation" | "selfPR";
-    field2Placeholder: string;
-    field2CanGenerate: boolean;
-    field3Label: string;
-    field3Placeholder: string;
-  }
-> = {
+type FormatConfig = {
+  heading: string;
+  field1Label: string;
+  field1Key: "motivation" | "selfPR";
+  field1Placeholder: string;
+  field1CanGenerate: boolean;
+  field2Label: string;
+  field2Key: "motivation" | "selfPR";
+  field2Placeholder: string;
+  field2CanGenerate: boolean;
+  field3Label: string;
+  field3Placeholder: string;
+};
+
+const FORMAT_CONFIG: Partial<Record<ResumeFormat, FormatConfig>> = {
   jis: {
     heading: "志望動機・自己PR",
     field1Label: "志望動機",
@@ -128,8 +128,12 @@ export function MotivationSection({ className, format = "jis" }: { className?: s
 
   const [genLoading, setGenLoading] = useState<"field1" | "field2" | null>(null);
   const [genError, setGenError] = useState<string | null>(null);
+  const [showDraftPicker, setShowDraftPicker] = useState<"field1" | "field2" | null>(null);
+  const [drafts, setDrafts] = useState<{ id: string; title: string; text: string }[]>([]);
+  const [loadingDrafts, setLoadingDrafts] = useState(false);
+  const { user } = useAuthStore();
 
-  const cfg = FORMAT_CONFIG[format];
+  const cfg = FORMAT_CONFIG[format] ?? FORMAT_CONFIG["jis"]!;
   const name = info ? `${info.lastName}${info.firstName}` : "";
   const workSummary = workHistory.map((w) => `${w.company} ${w.position ?? ""}`).join("、") || "（職歴なし）";
 
@@ -148,6 +152,30 @@ export function MotivationSection({ className, format = "jis" }: { className?: s
     } finally {
       setGenLoading(null);
     }
+  };
+
+  const fetchDrafts = async (field: "field1" | "field2") => {
+    if (!user) return;
+    setLoadingDrafts(true);
+    setShowDraftPicker(field);
+    try {
+      const res = await fetch("/api/resume");
+      const json = await res.json();
+      const all = (json.items ?? []) as { id: string; title: string; format: string; motivation: string; selfPR: string }[];
+      setDrafts(
+        all
+          .filter((r) => r.format === "ai_draft")
+          .map((r) => ({ id: r.id, title: r.title, text: r.motivation || r.selfPR }))
+      );
+    } finally {
+      setLoadingDrafts(false);
+    }
+  };
+
+  const handleApplyDraft = (field: "field1" | "field2", text: string) => {
+    const key = field === "field1" ? cfg.field1Key : cfg.field2Key;
+    setValue(key)(text);
+    setShowDraftPicker(null);
   };
 
   return (
@@ -188,6 +216,37 @@ export function MotivationSection({ className, format = "jis" }: { className?: s
             }
           </button>
         )}
+        {user && (
+          <div className="relative">
+            <button
+              onClick={() => showDraftPicker === "field1" ? setShowDraftPicker(null) : fetchDrafts("field1")}
+              className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-indigo-600 transition-colors"
+            >
+              {loadingDrafts && showDraftPicker === "field1"
+                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                : <ClipboardList className="h-3.5 w-3.5" />
+              }
+              AI生成履歴から引用
+            </button>
+            {showDraftPicker === "field1" && (
+              <div className="absolute left-0 top-full mt-1 z-20 w-80 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden">
+                <div className="px-3 py-2 bg-slate-50 border-b text-xs font-semibold text-slate-600">保存済みのAI生成テキスト</div>
+                {drafts.length === 0
+                  ? <p className="px-4 py-6 text-xs text-slate-400 text-center">保存されたAI生成テキストがありません</p>
+                  : <div className="max-h-60 overflow-y-auto">
+                      {drafts.map((d) => (
+                        <button key={d.id} onClick={() => handleApplyDraft("field1", d.text)}
+                          className="w-full text-left px-4 py-3 hover:bg-indigo-50 transition-colors border-b border-slate-50 last:border-0">
+                          <p className="text-xs font-semibold text-slate-700 truncate">{d.title}</p>
+                          <p className="text-xs text-slate-400 mt-0.5 line-clamp-2">{d.text}</p>
+                        </button>
+                      ))}
+                    </div>
+                }
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* フィールド2 */}
@@ -217,6 +276,37 @@ export function MotivationSection({ className, format = "jis" }: { className?: s
               : <><Sparkles className="h-4 w-4" />AIで自動生成</>
             }
           </button>
+        )}
+        {user && (
+          <div className="relative">
+            <button
+              onClick={() => showDraftPicker === "field2" ? setShowDraftPicker(null) : fetchDrafts("field2")}
+              className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-indigo-600 transition-colors"
+            >
+              {loadingDrafts && showDraftPicker === "field2"
+                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                : <ClipboardList className="h-3.5 w-3.5" />
+              }
+              AI生成履歴から引用
+            </button>
+            {showDraftPicker === "field2" && (
+              <div className="absolute left-0 top-full mt-1 z-20 w-80 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden">
+                <div className="px-3 py-2 bg-slate-50 border-b text-xs font-semibold text-slate-600">保存済みのAI生成テキスト</div>
+                {drafts.length === 0
+                  ? <p className="px-4 py-6 text-xs text-slate-400 text-center">保存されたAI生成テキストがありません</p>
+                  : <div className="max-h-60 overflow-y-auto">
+                      {drafts.map((d) => (
+                        <button key={d.id} onClick={() => handleApplyDraft("field2", d.text)}
+                          className="w-full text-left px-4 py-3 hover:bg-indigo-50 transition-colors border-b border-slate-50 last:border-0">
+                          <p className="text-xs font-semibold text-slate-700 truncate">{d.title}</p>
+                          <p className="text-xs text-slate-400 mt-0.5 line-clamp-2">{d.text}</p>
+                        </button>
+                      ))}
+                    </div>
+                }
+              </div>
+            )}
+          </div>
         )}
       </div>
 

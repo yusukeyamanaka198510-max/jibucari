@@ -4,9 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   Sparkles, Copy, Check, ChevronLeft, ArrowRight,
-  Loader2, BookOpen, BriefcaseBusiness, FileText,
+  Loader2, BookOpen, BriefcaseBusiness, FileText, Save,
 } from "lucide-react";
 import { useResumeStore } from "@/store/resumeStore";
+import { useAuthStore } from "@/store/authStore";
+import { AuthModal } from "@/components/organisms/AuthModal";
 
 type GenType = "selfPR" | "motivation" | "summary";
 
@@ -49,16 +51,22 @@ export function AiSupportClient() {
   const [error,        setError]        = useState<string | null>(null);
   const [copiedResult, setCopiedResult] = useState(false);
   const [reflected,    setReflected]    = useState<string | null>(null);
+  const [saving,       setSaving]       = useState(false);
+  const [savedId,      setSavedId]      = useState<string | null>(null);
+  const [currentGenType, setCurrentGenType] = useState<GenType | null>(null);
 
   // Zustand store への反映
   const setMotivation = useResumeStore((s) => s.setMotivation);
   const setSelfPR     = useResumeStore((s) => s.setSelfPR);
+  const { user, openAuthModal } = useAuthStore();
 
   const handleGenerate = async (type: GenType) => {
     setLoading(type);
     setError(null);
     setGenerated("");
     setReflected(null);
+    setCurrentGenType(type);
+    setSavedId(null);
     try {
       const text = await callGenerate(type, { company, position, strength, experience, achievement });
       setGenerated(text);
@@ -66,6 +74,22 @@ export function AiSupportClient() {
       setError((e as Error).message);
     } finally {
       setLoading(null);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!user) { openAuthModal(window.location.pathname); return; }
+    if (!generated || !currentGenType) return;
+    setSaving(true);
+    try {
+      await fetch("/api/ai/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ genType: currentGenType, text: generated, company, position }),
+      });
+      setSavedId("done");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -285,6 +309,26 @@ export function AiSupportClient() {
                 }
               </div>
 
+              {/* 保存ボタン */}
+              {generated && (
+                <button
+                  onClick={handleSave}
+                  disabled={saving || !!savedId}
+                  className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 text-sm font-semibold transition-all ${
+                    savedId
+                      ? "border-emerald-400 bg-emerald-50 text-emerald-700"
+                      : "border-slate-200 bg-slate-50 text-slate-600 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700"
+                  } disabled:opacity-50`}
+                >
+                  {saving
+                    ? <><Loader2 className="h-4 w-4 animate-spin" />保存中...</>
+                    : savedId
+                      ? <><Check className="h-4 w-4 text-emerald-500" />作成履歴に保存しました</>
+                      : <><Save className="h-4 w-4" />この文章を作成履歴に保存する</>
+                  }
+                </button>
+              )}
+
               {/* 反映ボタン */}
               {generated && (
                 <div className="space-y-2 pt-1">
@@ -351,6 +395,7 @@ export function AiSupportClient() {
           </div>
         </div>
       </main>
+      <AuthModal />
     </div>
   );
 }
