@@ -243,7 +243,7 @@ export function PersonalInfoSection({ className }: { className?: string }) {
           <p className="text-xs text-slate-400 mt-1">カタカナはひらがなに変換して住所フリガナに自動反映されます</p>
         </FormField>
 
-        <FormField id="addressKana" label="住所（フリガナ）">
+        <FormField id="addressKana" label="住所（ふりがな）">
           <Input id="addressKana" value={info.addressKana} onChange={(e) => field("addressKana")(e.target.value)} placeholder="とうきょうとしぶやく〇〇" />
         </FormField>
       </div>
