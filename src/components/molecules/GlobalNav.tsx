@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Menu, X, FileText, Sparkles, HelpCircle, Clock,
-  CalendarDays, User, LogOut, ChevronRight,
+  CalendarDays, User, LogOut, ChevronRight, BookOpen,
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { AuthModal } from "@/components/organisms/AuthModal";
@@ -24,6 +24,13 @@ const NAV_ITEMS = [
     label: "AI文章生成",
     desc: "志望動機・自己PRをAIで作成",
     href: "/ai-support",
+    auth: false,
+  },
+  {
+    icon: <BookOpen className="h-4 w-4" />,
+    label: "お役立ち記事",
+    desc: "履歴書・転職の活用法まとめ",
+    href: "/articles",
     auth: false,
   },
   {
