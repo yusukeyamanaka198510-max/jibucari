@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Users } from "lucide-react";
-import { MOCK_USERS } from "@/lib/adminMockData";
 import { UsersClient } from "./UsersClient";
 
 export const metadata: Metadata = { title: "ユーザー管理 | ジブキャリ管理" };
@@ -18,7 +17,7 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
-      <UsersClient users={MOCK_USERS} />
+      <UsersClient />
     </div>
   );
 }

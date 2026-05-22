@@ -1,12 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { ArrowLeft, Users } from "lucide-react";
-import {
-  getUserById,
-  getResumesByUserId,
-  getActionLogsByUserId,
-} from "@/lib/adminMockData";
 import { UserDetailClient } from "./UserDetailClient";
 
 interface Props {
@@ -14,19 +8,10 @@ interface Props {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const u = getUserById(params.id);
-  if (!u) return { title: "ユーザーが見つかりません" };
-  return { title: `${u.lastName} ${u.firstName} | ジブキャリ管理` };
+  return { title: `ユーザー詳細 (${params.id}) | ジブキャリ管理` };
 }
 
 export default function AdminUserDetailPage({ params }: Props) {
-  const found = getUserById(params.id);
-  if (!found) notFound();
-  const user = found as NonNullable<typeof found>;
-
-  const resumes = getResumesByUserId(params.id);
-  const actionLogs = getActionLogsByUserId(params.id);
-
   return (
     <div className="flex-1 p-8 space-y-6">
       {/* Breadcrumb */}
@@ -39,9 +24,7 @@ export default function AdminUserDetailPage({ params }: Props) {
           ユーザー管理
         </Link>
         <span className="text-slate-300">/</span>
-        <span className="text-slate-700 font-semibold">
-          {user.lastName} {user.firstName}
-        </span>
+        <span className="text-slate-700 font-semibold">ユーザー詳細</span>
       </nav>
 
       {/* Page title */}
@@ -51,13 +34,11 @@ export default function AdminUserDetailPage({ params }: Props) {
         </div>
         <div>
           <h1 className="text-2xl font-black text-slate-900">ユーザー詳細</h1>
-          <p className="text-sm text-slate-500">
-            {user.lastName} {user.firstName} さんの詳細情報
-          </p>
+          <p className="text-sm text-slate-500">ユーザーの詳細情報・行動ログ・対応履歴を確認できます</p>
         </div>
       </div>
 
-      <UserDetailClient user={user} resumes={resumes} actionLogs={actionLogs} />
+      <UserDetailClient userId={params.id} />
     </div>
   );
 }
