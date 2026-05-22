@@ -1,6 +1,9 @@
 import Link from "next/link";
 import Image from "next/image";
 import { NavUser } from "@/components/molecules/NavUser";
+import { ScoutButton } from "@/components/molecules/ScoutButton";
+import { AiSupportButton } from "@/components/molecules/AiSupportButton";
+import { GlobalNav } from "@/components/molecules/GlobalNav";
 
 /* ─── データ定義 ──────────────────────────────────────────── */
 const BENEFITS = [
@@ -98,7 +101,7 @@ export default function HomePage() {
           <span className="font-black text-xl tracking-tight bg-gradient-to-r from-indigo-600 to-violet-500 bg-clip-text text-transparent">
             ジブキャリ
           </span>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <NavUser />
             <Link
               href="/resume/new"
@@ -106,6 +109,7 @@ export default function HomePage() {
             >
               無料でつくる →
             </Link>
+            <GlobalNav />
           </div>
         </div>
       </nav>
@@ -151,6 +155,7 @@ export default function HomePage() {
                 >
                   ✦ 今すぐ無料でつくる
                 </Link>
+                <AiSupportButton />
                 <a
                   href="#how"
                   className="w-full sm:w-auto inline-flex items-center justify-center text-slate-300 font-semibold text-base px-7 py-4 rounded-2xl border border-white/15 hover:border-white/30 hover:text-white transition-colors"
@@ -329,13 +334,17 @@ export default function HomePage() {
                 <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mb-3 leading-snug">
                   登録情報をもとに<br className="sm:hidden" />スカウトが届くかも。
                 </h2>
-                <p className="text-slate-500 text-sm sm:text-base leading-relaxed mb-6">
+                <p className="text-slate-500 text-sm sm:text-base leading-relaxed mb-4">
                   プロフィールを登録すると、ジブキャリのキャリアアドバイザーが内容を確認。あなたの経験・スキルに合った求人や面談のご案内が届く可能性があります。<br />
                   <span className="font-semibold text-indigo-600">履歴書を作るだけで、チャンスが広がります。</span>
+                </p>
+                <p className="text-slate-500 text-sm sm:text-base leading-relaxed mb-6">
+                  また、ジブキャリでは厳選した<span className="font-semibold text-slate-700">優良おすすめ企業</span>もご紹介しています。成長中のスタートアップから大手企業まで、働きやすさ・待遇・文化を徹底リサーチした求人を掲載。あなたのキャリアに本当にマッチする企業との出会いをサポートします。
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 mb-7">
                   {[
                     { icon: "📬", text: "非公開求人のご案内" },
+                    { icon: "🏢", text: "優良企業を厳選紹介" },
                     { icon: "🤝", text: "キャリア相談も無料" },
                     { icon: "🔒", text: "プロフィールは非公開" },
                   ].map((item) => (
@@ -345,12 +354,7 @@ export default function HomePage() {
                     </div>
                   ))}
                 </div>
-                <Link
-                  href="/register"
-                  className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold px-8 py-3.5 rounded-2xl shadow-lg shadow-indigo-300/50 hover:shadow-indigo-400/60 hover:scale-105 transition-all duration-200"
-                >
-                  ✦ 無料で登録してスカウトを待つ
-                </Link>
+                <ScoutButton />
               </div>
             </div>
           </div>

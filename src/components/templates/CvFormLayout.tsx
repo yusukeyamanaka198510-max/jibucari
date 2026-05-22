@@ -14,6 +14,9 @@ import { cn } from "@/lib/utils";
 import type { CvWorkEntry, CvSkillEntry } from "@/types/cv";
 import { ProfileSyncBar } from "@/components/molecules/ProfileSyncBar";
 import { useProfileStore } from "@/store/profileStore";
+import { useAuthStore } from "@/store/authStore";
+import { AuthModal } from "@/components/organisms/AuthModal";
+import { ConsultationSheet } from "@/components/organisms/ConsultationSheet";
 
 const STEPS = [
   { id: 1, label: "基本情報",   short: "基本" },
@@ -38,7 +41,9 @@ export function CvFormLayout() {
   const autoSaveStatus   = useCvStore((s) => s.autoSaveStatus);
   const [step, setStep]  = useState(1);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showConsultSheet, setShowConsultSheet] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { user, openAuthModal } = useAuthStore();
 
   useEffect(() => { initNew(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -54,7 +59,7 @@ export function CvFormLayout() {
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [current, saveCurrentToList, setAutoSaveStatus]);
 
-  const handleDownload = async () => {
+  const executeDownload = async () => {
     if (!current) return;
     setIsGenerating(true);
     try {
@@ -66,7 +71,16 @@ export function CvFormLayout() {
       const a = document.createElement("a");
       a.href = url; a.download = `${current.title}.pdf`; a.click();
       URL.revokeObjectURL(url);
+      setShowConsultSheet(true);
     } finally { setIsGenerating(false); }
+  };
+
+  const handleDownload = () => {
+    if (!user) {
+      openAuthModal(typeof window !== "undefined" ? window.location.pathname + window.location.search : "/");
+      return;
+    }
+    void executeDownload();
   };
 
   const { saveProfile, profile: savedProfile } = useProfileStore();
@@ -210,6 +224,15 @@ export function CvFormLayout() {
           )}
         </div>
       </main>
+
+      <AuthModal />
+      <ConsultationSheet
+        open={showConsultSheet}
+        onClose={() => setShowConsultSheet(false)}
+        name={`${current.lastName}${current.firstName}`}
+        email={current.email ?? ""}
+        phone={current.mobilePhone ?? ""}
+      />
     </div>
   );
 }

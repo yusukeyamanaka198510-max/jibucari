@@ -1,78 +1,96 @@
-import { type NextRequest, NextResponse } from "next/server";
-import { createAdminClient, adminUnavailable } from "@/lib/adminClient";
-import type { UpsertArticleInput } from "@/types/admin";
+import { NextResponse } from "next/server";
+import { createSupabaseServerClient } from "@/infrastructure/supabase/serverClient";
+import type { Article } from "@/types/article";
 
 export const dynamic = "force-dynamic";
 
-/** GET /api/admin/articles */
-export async function GET(req: NextRequest) {
-  const admin = createAdminClient();
-  if (!admin) return adminUnavailable();
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim()).filter(Boolean);
 
-  const sp = req.nextUrl.searchParams;
-  const status   = sp.get("status");
-  const category = sp.get("category");
-  const page     = Number(sp.get("page") ?? 1);
-  const perPage  = Number(sp.get("perPage") ?? 20);
-
-  let query = admin
-    .from("articles")
-    .select("id, title, slug, category, status, excerpt, published_at, created_at, updated_at", { count: "exact" })
-    .order("updated_at", { ascending: false })
-    .range((page - 1) * perPage, page * perPage - 1);
-
-  if (status)   query = query.eq("status", status);
-  if (category) query = query.eq("category", category);
-
-  const { data, count, error } = await query;
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  return NextResponse.json({
-    data,
-    total:      count ?? 0,
-    page,
-    perPage,
-    totalPages: Math.ceil((count ?? 0) / perPage),
-  });
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function toArticle(row: any): Article {
+  return {
+    id: row.id,
+    title: row.title,
+    slug: row.slug,
+    content: row.content ?? "",
+    excerpt: row.excerpt ?? "",
+    thumbnailUrl: row.thumbnail_url ?? null,
+    category: row.category ?? null,
+    published: row.published ?? false,
+    publishedAt: row.published_at ?? null,
+    viewCount: row.view_count ?? 0,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
 }
 
-/** POST /api/admin/articles — 記事作成 */
-export async function POST(req: NextRequest) {
-  const admin = createAdminClient();
-  if (!admin) return adminUnavailable();
+async function checkAdmin(supabase: NonNullable<ReturnType<typeof createSupabaseServerClient>>) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+  if (ADMIN_EMAILS.length > 0 && user.email && ADMIN_EMAILS.includes(user.email)) return true;
+  if (ADMIN_EMAILS.length === 0) return true; // 開発環境用フォールバック
+  return false;
+}
 
-  const body = (await req.json()) as UpsertArticleInput;
-  if (!body.title?.trim() || !body.category) {
-    return NextResponse.json({ error: "title and category are required" }, { status: 400 });
+export async function GET() {
+  const supabase = createSupabaseServerClient();
+  if (!supabase) {
+    return NextResponse.json({ items: [] });
   }
 
-  const publishedAt = body.status === "published"
-    ? (body.publishedAt ?? new Date().toISOString())
-    : null;
+  const isAdmin = await checkAdmin(supabase);
+  if (!isAdmin) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
-  const { data, error } = await admin
+  const { data, error } = await supabase
+    .from("articles")
+    .select("*")
+    .order("updated_at", { ascending: false });
+
+  if (error) {
+    return NextResponse.json({ items: [] });
+  }
+
+  const items = (data ?? []).map(toArticle);
+  return NextResponse.json({ items });
+}
+
+export async function POST(req: Request) {
+  const supabase = createSupabaseServerClient();
+  if (!supabase) {
+    return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
+  }
+
+  const isAdmin = await checkAdmin(supabase);
+  if (!isAdmin) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const body = await req.json();
+  const now = new Date().toISOString();
+
+  const { data, error } = await supabase
     .from("articles")
     .insert({
-      title:         body.title,
-      slug:          body.slug ?? null,
-      content:       body.content ?? "",
-      excerpt:       body.excerpt ?? null,
-      category:      body.category,
-      status:        body.status ?? "draft",
+      title: body.title,
+      slug: body.slug,
+      content: body.content ?? "",
+      excerpt: body.excerpt ?? "",
       thumbnail_url: body.thumbnailUrl ?? null,
-      published_at:  publishedAt,
+      category: body.category ?? null,
+      published: body.published ?? false,
+      published_at: body.published ? (body.publishedAt ?? now) : null,
+      view_count: 0,
+      created_at: now,
+      updated_at: now,
     })
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error || !data) {
+    return NextResponse.json({ error: error?.message ?? "Failed to create" }, { status: 500 });
+  }
 
-  await admin.from("admin_operation_logs").insert({
-    operation_type: "create",
-    target_type:    "article",
-    target_id:      (data as { id: string }).id,
-    summary:        `記事「${body.title}」を作成`,
-  });
-
-  return NextResponse.json({ data }, { status: 201 });
+  return NextResponse.json(toArticle(data), { status: 201 });
 }

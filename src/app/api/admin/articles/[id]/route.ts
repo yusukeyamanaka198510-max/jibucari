@@ -1,98 +1,113 @@
-import { type NextRequest, NextResponse } from "next/server";
-import { createAdminClient, adminUnavailable } from "@/lib/adminClient";
-import type { UpsertArticleInput } from "@/types/admin";
+import { NextResponse } from "next/server";
+import { createSupabaseServerClient } from "@/infrastructure/supabase/serverClient";
+import type { Article } from "@/types/article";
 
 export const dynamic = "force-dynamic";
 
-/** GET /api/admin/articles/[id] */
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const admin = createAdminClient();
-  if (!admin) return adminUnavailable();
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim()).filter(Boolean);
 
-  const { data, error } = await admin
-    .from("articles")
-    .select("*")
-    .eq("id", params.id)
-    .maybeSingle();
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json({ data });
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function toArticle(row: any): Article {
+  return {
+    id: row.id,
+    title: row.title,
+    slug: row.slug,
+    content: row.content ?? "",
+    excerpt: row.excerpt ?? "",
+    thumbnailUrl: row.thumbnail_url ?? null,
+    category: row.category ?? null,
+    published: row.published ?? false,
+    publishedAt: row.published_at ?? null,
+    viewCount: row.view_count ?? 0,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
 }
 
-/** PATCH /api/admin/articles/[id] */
-export async function PATCH(
-  req: NextRequest,
+async function checkAdmin(supabase: NonNullable<ReturnType<typeof createSupabaseServerClient>>) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+  if (ADMIN_EMAILS.length > 0 && user.email && ADMIN_EMAILS.includes(user.email)) return true;
+  if (ADMIN_EMAILS.length === 0) return true;
+  return false;
+}
+
+export async function PUT(
+  req: Request,
   { params }: { params: { id: string } }
 ) {
-  const admin = createAdminClient();
-  if (!admin) return adminUnavailable();
+  const { id } = params;
+  const supabase = createSupabaseServerClient();
+  if (!supabase) {
+    return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
+  }
 
-  const body = (await req.json()) as Partial<UpsertArticleInput>;
+  const isAdmin = await checkAdmin(supabase);
+  if (!isAdmin) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
-  // 公開に変更する場合は published_at をセット
-  const updates: Record<string, unknown> = {};
-  if (body.title        !== undefined) updates.title         = body.title;
-  if (body.slug         !== undefined) updates.slug          = body.slug;
-  if (body.content      !== undefined) updates.content       = body.content;
-  if (body.excerpt      !== undefined) updates.excerpt       = body.excerpt;
-  if (body.category     !== undefined) updates.category      = body.category;
-  if (body.thumbnailUrl !== undefined) updates.thumbnail_url = body.thumbnailUrl;
-  if (body.status       !== undefined) {
-    updates.status = body.status;
-    if (body.status === "published" && !body.publishedAt) {
-      updates.published_at = new Date().toISOString();
+  const body = await req.json();
+  const now = new Date().toISOString();
+
+  const updateData: Record<string, unknown> = {
+    updated_at: now,
+  };
+
+  if (body.title !== undefined) updateData.title = body.title;
+  if (body.slug !== undefined) updateData.slug = body.slug;
+  if (body.content !== undefined) updateData.content = body.content;
+  if (body.excerpt !== undefined) updateData.excerpt = body.excerpt;
+  if (body.thumbnailUrl !== undefined) updateData.thumbnail_url = body.thumbnailUrl;
+  if (body.category !== undefined) updateData.category = body.category;
+  if (body.published !== undefined) {
+    updateData.published = body.published;
+    if (body.published && !body.publishedAt) {
+      updateData.published_at = now;
+    } else if (!body.published) {
+      updateData.published_at = null;
+    } else {
+      updateData.published_at = body.publishedAt;
     }
   }
-  if (body.publishedAt  !== undefined) updates.published_at  = body.publishedAt;
 
-  const { data: before } = await admin.from("articles").select("title, status").eq("id", params.id).single();
-
-  const { data, error } = await admin
+  const { data, error } = await supabase
     .from("articles")
-    .update(updates)
-    .eq("id", params.id)
+    .update(updateData)
+    .eq("id", id)
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error || !data) {
+    return NextResponse.json({ error: error?.message ?? "Failed to update" }, { status: 500 });
+  }
 
-  const beforeData = before as { title: string; status: string } | null;
-  await admin.from("admin_operation_logs").insert({
-    operation_type: "update",
-    target_type:    "article",
-    target_id:      params.id,
-    summary:        `記事「${beforeData?.title ?? params.id}」を更新`,
-    diff: {
-      before: { status: beforeData?.status },
-      after:  { status: updates.status },
-    },
-  });
-
-  return NextResponse.json({ data });
+  return NextResponse.json(toArticle(data));
 }
 
-/** DELETE /api/admin/articles/[id] */
 export async function DELETE(
-  _req: NextRequest,
+  _req: Request,
   { params }: { params: { id: string } }
 ) {
-  const admin = createAdminClient();
-  if (!admin) return adminUnavailable();
+  const { id } = params;
+  const supabase = createSupabaseServerClient();
+  if (!supabase) {
+    return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
+  }
 
-  const { data: article } = await admin.from("articles").select("title").eq("id", params.id).single();
-  const { error } = await admin.from("articles").delete().eq("id", params.id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const isAdmin = await checkAdmin(supabase);
+  if (!isAdmin) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
-  await admin.from("admin_operation_logs").insert({
-    operation_type: "delete",
-    target_type:    "article",
-    target_id:      params.id,
-    summary:        `記事「${(article as { title?: string } | null)?.title ?? params.id}」を削除`,
-  });
+  const { error } = await supabase
+    .from("articles")
+    .delete()
+    .eq("id", id);
 
-  return NextResponse.json({ success: true });
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true });
 }

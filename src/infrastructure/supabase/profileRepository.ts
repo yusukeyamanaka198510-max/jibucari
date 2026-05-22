@@ -1,5 +1,6 @@
 import { createSupabaseBrowserClient } from "./browserClient";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { EducationEntry, WorkEntry } from "@/types";
 
 export interface UserProfileData {
   id: string;
@@ -16,6 +17,8 @@ export interface UserProfileData {
   building: string;
   phone: string;
   email: string;
+  education?: EducationEntry[];
+  workHistory?: WorkEntry[];
 }
 
 type DbRow = {
@@ -33,6 +36,8 @@ type DbRow = {
   building: string;
   phone: string;
   email: string;
+  education: EducationEntry[] | null;
+  work_history: WorkEntry[] | null;
 };
 
 function toData(row: DbRow): UserProfileData {
@@ -51,6 +56,8 @@ function toData(row: DbRow): UserProfileData {
     building: row.building,
     phone: row.phone,
     email: row.email,
+    education: row.education ?? [],
+    workHistory: row.work_history ?? [],
   };
 }
 
@@ -91,6 +98,8 @@ export class SupabaseProfileRepository {
       building: profile.building,
       phone: profile.phone,
       email: profile.email,
+      education: profile.education ?? [],
+      work_history: profile.workHistory ?? [],
     };
 
     const { data, error } = await this.supabase

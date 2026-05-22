@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/infrastructure/supabase/serverClient";
 import { SupabaseResumeRepository } from "@/infrastructure/repositories/supabaseResumeRepository";
 import { updateResumeUseCase } from "@/domain/usecases/updateResume";
-import type { ResumeUpdate } from "@/types";
+import type { Resume, ResumeUpdate } from "@/types";
 
 interface RouteContext {
   params: { id: string };
@@ -44,6 +44,24 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   try {
     const updated = await updateResumeUseCase(repo, params.id, patch);
     return NextResponse.json({ data: updated });
+  } catch (e) {
+    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+  }
+}
+
+/** PUT /api/resume/[id] — upsert（ログイン後の自動保存で使用） */
+export async function PUT(req: NextRequest, { params }: RouteContext) {
+  const supabase = createSupabaseServerClient();
+  if (!supabase) return unauthorized();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return unauthorized();
+
+  const resume = await req.json() as Resume;
+  const repo = new SupabaseResumeRepository(supabase);
+
+  try {
+    const saved = await repo.upsert({ ...resume, userId: user.id });
+    return NextResponse.json({ data: saved });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }

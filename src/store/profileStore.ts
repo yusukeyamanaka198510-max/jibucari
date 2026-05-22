@@ -13,7 +13,7 @@ interface ProfileState {
 interface ProfileActions {
   loadProfile(userId: string): Promise<void>;
   saveProfile(userId: string, data: Omit<UserProfileData, "id">): Promise<void>;
-  updateField(key: keyof Omit<UserProfileData, "id">, value: string): void;
+  updateField(key: keyof Omit<UserProfileData, "id">, value: unknown): void;
   clearProfile(): void;
 }
 

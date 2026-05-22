@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, createElement } from "react";
+import { useEffect, useRef, useState, useCallback, createElement } from "react";
 import { pdf } from "@react-pdf/renderer";
 import { useResumeStore } from "@/store/resumeStore";
 import { useAutoSave } from "@/hooks/useAutoSave";
@@ -23,6 +23,9 @@ import { cn } from "@/lib/utils";
 import type { ResumeFormat } from "@/types";
 import { ProfileSyncBar } from "@/components/molecules/ProfileSyncBar";
 import { useProfileStore } from "@/store/profileStore";
+import { useAuthStore } from "@/store/authStore";
+import { AuthModal } from "@/components/organisms/AuthModal";
+import { ConsultationSheet } from "@/components/organisms/ConsultationSheet";
 
 interface ResumeFormLayoutProps {
   format?: ResumeFormat;
@@ -35,6 +38,7 @@ const FORMAT_LABELS: Record<ResumeFormat, string> = {
   new_graduate: "新卒履歴書",
   part_time: "アルバイト履歴書",
   no_photo: "写真なし履歴書",
+  ai_draft: "AI生成テキスト",
 };
 
 type StepDef = { id: number; label: string; short: string };
@@ -72,16 +76,86 @@ function buildSteps(format: ResumeFormat): StepDef[] {
   return base;
 }
 
+const PENDING_ACTION_KEY = "jibucari_pending_action";
+const PENDING_STEP_KEY   = "jibucari_pending_step";
+
 export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutProps) {
   const initNew = useResumeStore((s) => s.initNew);
   const current = useResumeStore((s) => s.current);
   const saved   = useResumeStore((s) => s.saved);
-  const [step, setStep]             = useState(1);
+
+  // OAuth後 or URLパラメータ(?step=N)でステップを復元する lazy initialization
+  const [step, setStep] = useState(() => {
+    if (typeof window !== "undefined") {
+      // sessionStorage（OAuth後の復元）を優先
+      const ss = sessionStorage.getItem(PENDING_STEP_KEY);
+      if (ss) return parseInt(ss, 10);
+      // URLパラメータ ?step=N で直接ステップ指定
+      const sp = new URLSearchParams(window.location.search).get("step");
+      if (sp) return parseInt(sp, 10);
+    }
+    return 1;
+  });
+
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isEmailSending, setIsEmailSending] = useState(false);
   const [emailSent, setEmailSent]   = useState(false);
+  const [showConsultSheet, setShowConsultSheet] = useState(false);
 
-  const { download, isGenerating } = usePdfDownload(current);
+  const { user, openAuthModal } = useAuthStore();
+  const { download: downloadPdf, isGenerating } = usePdfDownload(current);
+
+  // Supabase への自動保存（ログイン中のみ）
+  const currentRef = useRef(current);
+  useEffect(() => { currentRef.current = current; }, [current]);
+
+  const saveResumeToSupabase = useCallback(async (_id: string) => {
+    if (!user) return;
+    const resume = currentRef.current;
+    if (!resume) return;
+    try {
+      await fetch(`/api/resume/${resume.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...resume, userId: user.id }),
+      });
+    } catch { /* サイレントフェイル */ }
+  }, [user]);
+
+  // OAuth リダイレクト後にユーザーがログインしたら、保留中のアクションを自動実行
+  useEffect(() => {
+    if (!user) return;
+    const pending = sessionStorage.getItem(PENDING_ACTION_KEY);
+    if (!pending) return;
+    sessionStorage.removeItem(PENDING_ACTION_KEY);
+    sessionStorage.removeItem(PENDING_STEP_KEY);
+    if (pending === "download") {
+      downloadPdf();
+    } else if (pending === "preview") {
+      setIsPreviewing(true);
+    } else if (pending === "email") {
+      void executeEmailSend();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  const requireAuth = (action: string) => {
+    sessionStorage.setItem(PENDING_ACTION_KEY, action);
+    sessionStorage.setItem(PENDING_STEP_KEY, String(step));
+    openAuthModal(window.location.pathname + window.location.search);
+  };
+
+  const download = async () => {
+    if (!user) { requireAuth("download"); return; }
+    await downloadPdf();
+    setShowConsultSheet(true);
+  };
+
+  const handlePreview = () => {
+    if (!user) { requireAuth("preview"); return; }
+    setIsPreviewing(true);
+  };
+
   const activeFormat = (current?.format ?? format) as ResumeFormat;
   const STEPS = buildSteps(activeFormat);
   const lastStep = STEPS[STEPS.length - 1]?.id ?? STEPS.length;
@@ -94,12 +168,14 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
         return;
       }
     }
+    // OAuth リダイレクト後（pendingAction あり）はデータを保持するため initNew をスキップ
+    if (sessionStorage.getItem(PENDING_ACTION_KEY)) return;
     // 新規作成時は常に指定フォーマットで初期化（前回の残留データを上書き）
     initNew(format);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useAutoSave();
+  useAutoSave(user ? saveResumeToSupabase : undefined);
 
   const { saveProfile, profile: savedProfile } = useProfileStore();
 
@@ -120,6 +196,8 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
       building: pi.building,
       phone: pi.mobilePhone,
       email: pi.email,
+      education: current.education,
+      workHistory: current.workHistory,
     });
   };
 
@@ -140,7 +218,8 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
         }
       } catch { /* フリガナ取得失敗時は空のまま */ }
     }
-    useResumeStore.getState().updatePersonalInfo({
+    const store = useResumeStore.getState();
+    store.updatePersonalInfo({
       lastName: savedProfile.lastName,
       firstName: savedProfile.firstName,
       lastNameKana: savedProfile.lastNameKana,
@@ -155,6 +234,13 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
       mobilePhone: savedProfile.phone,
       email: savedProfile.email,
     });
+    // 学歴・職歴も貼り付け（保存済みデータがある場合のみ）
+    if (savedProfile.education?.length) {
+      store.setEducation(savedProfile.education);
+    }
+    if (savedProfile.workHistory?.length) {
+      store.setWorkHistory(savedProfile.workHistory);
+    }
   };
 
   if (!current) {
@@ -165,8 +251,8 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
     );
   }
 
-  // メール送信（API経由）
-  const handleSendEmail = async () => {
+  // メール送信の実処理（認証済み前提）
+  const executeEmailSend = async () => {
     if (!current.personalInfo.email) {
       alert("基本情報にメールアドレスを入力してください。");
       return;
@@ -202,10 +288,17 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
     }
   };
 
+  // auth チェック付きメール送信
+  const handleSendEmail = async () => {
+    if (!user) { requireAuth("email"); return; }
+    await executeEmailSend();
+  };
+
   const progress = Math.round(((step - 1) / (STEPS.length - 1)) * 100);
 
   return (
     <>
+      <AuthModal />
       <div className="min-h-screen bg-slate-50">
         {/* ── スティッキーヘッダー ── */}
         <header className="sticky top-0 z-40 bg-white border-b border-slate-100 shadow-sm">
@@ -314,7 +407,7 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
               {step === 6 && activeFormat !== "part_time" && activeFormat !== "no_photo" && <PhotoStep />}
               {step === lastStep && (
                 <ReviewStep
-                  onPreview={() => setIsPreviewing(true)}
+                  onPreview={handlePreview}
                   onDownload={download}
                   isGenerating={isGenerating}
                   onEmailSend={handleSendEmail}
@@ -361,6 +454,14 @@ export function ResumeFormLayout({ format = "jis", resumeId }: ResumeFormLayoutP
         resume={current}
         isOpen={isPreviewing}
         onClose={() => setIsPreviewing(false)}
+      />
+
+      <ConsultationSheet
+        open={showConsultSheet}
+        onClose={() => setShowConsultSheet(false)}
+        name={`${current.personalInfo.lastName}${current.personalInfo.firstName}`}
+        email={current.personalInfo.email ?? ""}
+        phone={current.personalInfo.mobilePhone ?? ""}
       />
     </>
   );

@@ -45,6 +45,17 @@ export class SupabaseResumeRepository implements IResumeRepository {
     };
   }
 
+  /** INSERT OR UPDATE（id が存在する場合は更新、なければ新規作成） */
+  async upsert(resume: Resume): Promise<Resume> {
+    const { data, error } = await this.supabase
+      .from(TABLE)
+      .upsert(this.toRow(resume), { onConflict: "id" })
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return this.toDomain(data);
+  }
+
   async save(resume: Resume): Promise<Resume> {
     const { data, error } = await this.supabase
       .from(TABLE)

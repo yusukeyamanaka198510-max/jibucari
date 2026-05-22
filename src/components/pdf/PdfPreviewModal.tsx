@@ -5,6 +5,7 @@ import { X, Download } from "lucide-react";
 import { pdf } from "@react-pdf/renderer";
 import { ResumePdfDocument } from "./ResumePdfDocument";
 import { Button } from "@/components/atoms/Button";
+import { ConsultationSheet } from "@/components/organisms/ConsultationSheet";
 import type { Resume } from "@/types";
 
 // PDFViewer はブラウザ限定 & 重いので遅延ロード
@@ -20,12 +21,16 @@ interface PdfPreviewModalProps {
 
 /**
  * PDF プレビューとダウンロードを提供するモーダル。
- * @react-pdf/renderer の PDFViewer は SSR 非対応のため `"use client"` 必須。
+ * ダウンロード後に面談依頼シートを表示する。
  */
 export function PdfPreviewModal({ resume, isOpen, onClose }: PdfPreviewModalProps) {
   const [isDownloading, setIsDownloading] = useState(false);
+  const [showConsult, setShowConsult]     = useState(false);
 
   if (!isOpen) return null;
+
+  const info = resume.personalInfo;
+  const name = `${info.lastName}${info.firstName}`;
 
   const handleDownload = async () => {
     setIsDownloading(true);
@@ -38,6 +43,8 @@ export function PdfPreviewModal({ resume, isOpen, onClose }: PdfPreviewModalProp
       a.download = `${resume.title}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
+      // ダウンロード完了後に面談依頼シートを表示
+      setShowConsult(true);
     } finally {
       setIsDownloading(false);
     }
@@ -83,6 +90,15 @@ export function PdfPreviewModal({ resume, isOpen, onClose }: PdfPreviewModalProp
           </PDFViewer>
         </Suspense>
       </div>
+
+      {/* 面談依頼シート（ダウンロード後） */}
+      <ConsultationSheet
+        open={showConsult}
+        onClose={() => setShowConsult(false)}
+        name={name}
+        email={info.email ?? ""}
+        phone={info.mobilePhone ?? ""}
+      />
     </div>
   );
 }

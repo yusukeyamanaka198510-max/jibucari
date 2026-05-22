@@ -17,9 +17,10 @@ const ENTRY_OPTIONS: { value: EducationEntryType; label: string }[] = [
   { value: "transferred_in", label: "転入" },
 ];
 const EXIT_OPTIONS: { value: EducationExitType; label: string }[] = [
-  { value: "graduated",  label: "卒業" },
-  { value: "transferred", label: "転学" },
-  { value: "dropped_out", label: "中退" },
+  { value: "graduated",    label: "卒業" },
+  { value: "transferred",  label: "転学" },
+  { value: "study_abroad", label: "留学" },
+  { value: "dropped_out",  label: "中退" },
 ];
 
 const FORMAT_EDU_HINTS: Partial<Record<ResumeFormat, string>> = {

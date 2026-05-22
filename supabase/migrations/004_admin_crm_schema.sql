@@ -53,19 +53,22 @@ CREATE POLICY "action_logs_select_own"
 -- 3. page_sessions（ページ滞在・離脱ポイント）
 -- ────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.page_sessions (
-  id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id      UUID        REFERENCES auth.users(id) ON DELETE SET NULL,
-  session_key  TEXT        NOT NULL,
-  page         TEXT        NOT NULL,
-  started_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
-  ended_at     TIMESTAMPTZ,
-  duration_sec INTEGER,
-  exit_field   TEXT,           -- 離脱したフィールド or セクション名
-  is_completed BOOLEAN     NOT NULL DEFAULT false
+  id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id          UUID        REFERENCES auth.users(id) ON DELETE SET NULL,
+  page_url         TEXT        NOT NULL,
+  referrer         TEXT,
+  device_type      TEXT,
+  user_agent       TEXT,
+  entered_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+  exited_at        TIMESTAMPTZ,
+  exit_url         TEXT,
+  duration_seconds INTEGER,
+  max_scroll_depth SMALLINT,
+  form_abandoned   BOOLEAN     NOT NULL DEFAULT false
 );
 
-CREATE INDEX IF NOT EXISTS idx_page_sessions_user_id ON public.page_sessions (user_id, started_at DESC);
-CREATE INDEX IF NOT EXISTS idx_page_sessions_page    ON public.page_sessions (page, started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_page_sessions_user_id    ON public.page_sessions (user_id, entered_at DESC);
+CREATE INDEX IF NOT EXISTS idx_page_sessions_page_url  ON public.page_sessions (page_url, entered_at DESC);
 
 ALTER TABLE public.page_sessions ENABLE ROW LEVEL SECURITY;
 
@@ -82,28 +85,22 @@ CREATE POLICY "page_sessions_update_own"
 -- ────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.page_events (
   id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  session_id   UUID        NOT NULL REFERENCES public.page_sessions(id) ON DELETE CASCADE,
-  event_type   TEXT        NOT NULL,  -- 'field_focus','field_blur','field_input','scroll','submit','exit'
-  field_name   TEXT,
-  value_length INTEGER,
-  scroll_pct   SMALLINT,
+  session_id   UUID        REFERENCES public.page_sessions(id) ON DELETE CASCADE,
+  user_id      UUID        REFERENCES auth.users(id) ON DELETE SET NULL,
+  event_type   TEXT        NOT NULL,  -- 'field_focus','field_blur','field_input','scroll','click','exit'
+  event_target TEXT,
+  metadata     JSONB,
   occurred_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_page_events_session    ON public.page_events (session_id, occurred_at);
-CREATE INDEX IF NOT EXISTS idx_page_events_field_name ON public.page_events (field_name, event_type);
+CREATE INDEX IF NOT EXISTS idx_page_events_session     ON public.page_events (session_id, occurred_at);
+CREATE INDEX IF NOT EXISTS idx_page_events_event_type  ON public.page_events (event_type, occurred_at DESC);
 
 ALTER TABLE public.page_events ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "page_events_insert"
   ON public.page_events FOR INSERT
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.page_sessions s
-      WHERE s.id = session_id
-        AND (s.user_id = auth.uid() OR s.user_id IS NULL)
-    )
-  );
+  WITH CHECK (auth.uid() = user_id OR user_id IS NULL);
 
 -- ────────────────────────────────────────────
 -- 5. daily_stats（ダッシュボード高速化用 日次集計）
@@ -204,32 +201,10 @@ ALTER TABLE public.email_send_logs ENABLE ROW LEVEL SECURITY;
 -- 管理者のみ（service_role）
 
 -- ────────────────────────────────────────────
--- 10. articles（記事・コンテンツ管理）
+-- 10. articles テーブルは既存スキーマを利用
+--     (published: boolean, view_count: integer)
+--     このマイグレーションでは変更なし
 -- ────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS public.articles (
-  id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  author_id     UUID        REFERENCES auth.users(id) ON DELETE SET NULL,
-  title         TEXT        NOT NULL,
-  slug          TEXT        UNIQUE,
-  content       TEXT        NOT NULL DEFAULT '',
-  excerpt       TEXT,
-  category      TEXT        NOT NULL DEFAULT 'advice',  -- 'advice','real_story','news','tips'
-  status        TEXT        NOT NULL DEFAULT 'draft',   -- 'draft','published','archived'
-  thumbnail_url TEXT,
-  published_at  TIMESTAMPTZ,
-  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE INDEX IF NOT EXISTS idx_articles_status   ON public.articles (status, published_at DESC);
-CREATE INDEX IF NOT EXISTS idx_articles_category ON public.articles (category);
-
-ALTER TABLE public.articles ENABLE ROW LEVEL SECURITY;
-
--- 公開記事は誰でも閲覧可
-CREATE POLICY "articles_select_published"
-  ON public.articles FOR SELECT
-  USING (status = 'published');
 
 -- ────────────────────────────────────────────
 -- 11. admin_operation_logs（管理者操作履歴）
@@ -251,9 +226,9 @@ ALTER TABLE public.admin_operation_logs ENABLE ROW LEVEL SECURITY;
 -- 管理者のみ（service_role）
 
 -- ────────────────────────────────────────────
--- 12. articles の updated_at 自動更新トリガー
+-- 12. updated_at 自動更新トリガー
 -- ────────────────────────────────────────────
-CREATE OR REPLACE FUNCTION public.set_updated_at_articles()
+CREATE OR REPLACE FUNCTION public.set_updated_at_now()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
   NEW.updated_at = now();
@@ -261,15 +236,10 @@ BEGIN
 END;
 $$;
 
-DROP TRIGGER IF EXISTS articles_updated_at ON public.articles;
-CREATE TRIGGER articles_updated_at
-  BEFORE UPDATE ON public.articles
-  FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_articles();
-
 DROP TRIGGER IF EXISTS email_campaigns_updated_at ON public.email_campaigns;
 CREATE TRIGGER email_campaigns_updated_at
   BEFORE UPDATE ON public.email_campaigns
-  FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_articles();
+  FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_now();
 
 -- ────────────────────────────────────────────
 -- 13. 管理者ユーザー検索 RPC 関数

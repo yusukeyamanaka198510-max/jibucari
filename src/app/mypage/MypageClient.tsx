@@ -5,16 +5,19 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   User, LogOut, FileText, ChevronRight, Save, Pencil, X, Check,
-  Phone, Mail, MapPin, Calendar, BadgeCheck, Loader2,
+  Phone, Mail, MapPin, Calendar, BadgeCheck, Loader2, GraduationCap,
+  BriefcaseBusiness, PlusCircle, Trash2,
 } from "lucide-react";
+import { v4 as uuidv4 } from "uuid";
 import { useAuthStore } from "@/store/authStore";
 import { useProfileStore } from "@/store/profileStore";
 import { BirthDatePicker } from "@/components/molecules/BirthDatePicker";
 import type { UserProfileData } from "@/infrastructure/supabase/profileRepository";
+import type { EducationEntry, EducationEntryType, EducationExitType, WorkEntry } from "@/types";
 
-// ひらがな → カタカナ変換
-const toKatakana = (str: string) =>
-  str.replace(/[ぁ-ゖ]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0x60));
+// カタカナ → ひらがな変換
+const toHiragana = (str: string) =>
+  str.replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
 
 async function lookupPostalCode(digits: string): Promise<{ prefecture: string; city: string } | null> {
   try {
@@ -42,12 +45,20 @@ const PREFECTURES = [
   "熊本県","大分県","宮崎県","鹿児島県","沖縄県",
 ];
 
-type ProfileForm = Omit<UserProfileData, "id">;
+const YEARS = Array.from({ length: 80 }, (_, i) => new Date().getFullYear() - i);
+const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
+
+type ProfileForm = Omit<UserProfileData, "id"> & {
+  education: EducationEntry[];
+  workHistory: WorkEntry[];
+};
 
 const EMPTY_FORM: ProfileForm = {
   lastName: "", firstName: "", lastNameKana: "", firstNameKana: "",
   birthDate: "", gender: "", postalCode: "", prefecture: "",
   city: "", streetAddress: "", building: "", phone: "", email: "",
+  education: [],
+  workHistory: [],
 };
 
 interface MypageClientProps {
@@ -63,7 +74,9 @@ export function MypageClient({ userId, userEmail, initialProfile }: MypageClient
 
   const [isEditing, setIsEditing] = useState(!initialProfile);
   const [profile, setProfile] = useState<ProfileForm>(
-    initialProfile ? { ...initialProfile } : { ...EMPTY_FORM, email: userEmail }
+    initialProfile
+      ? { ...initialProfile, education: initialProfile.education ?? [], workHistory: initialProfile.workHistory ?? [] }
+      : { ...EMPTY_FORM, email: userEmail }
   );
   const [saved, setSaved] = useState(!!initialProfile);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -77,7 +90,7 @@ export function MypageClient({ userId, userEmail, initialProfile }: MypageClient
     router.push("/");
   };
 
-  const handleChange = (key: keyof ProfileForm, value: string) => {
+  const handleChange = (key: keyof Omit<ProfileForm, "education" | "workHistory">, value: string) => {
     setProfile((p) => ({ ...p, [key]: value }));
   };
 
@@ -104,7 +117,7 @@ export function MypageClient({ userId, userEmail, initialProfile }: MypageClient
     const isKanaOnly = (str: string) => /^[ぁ-ゖァ-ヶーｦ-ﾟ\s]+$/.test(str);
     return {
       onCompositionUpdate: (e: React.CompositionEvent<HTMLInputElement>) => {
-        if (isKanaOnly(e.data)) lastKanaRef.current = toKatakana(e.data);
+        if (isKanaOnly(e.data)) lastKanaRef.current = toHiragana(e.data);
       },
       onCompositionEnd: () => {
         if (lastKanaRef.current) {
@@ -113,6 +126,54 @@ export function MypageClient({ userId, userEmail, initialProfile }: MypageClient
         }
       },
     };
+  };
+
+  // ─── 学歴 操作 ────────────────────────────────────────────────────────────
+  const addEducation = () => {
+    const now = new Date();
+    const entry: EducationEntry = {
+      id: uuidv4(),
+      school: "",
+      entryYear: now.getFullYear(),
+      entryMonth: 4,
+      entryType: "enrolled",
+    };
+    setProfile((p) => ({ ...p, education: [...p.education, entry] }));
+  };
+
+  const updateEducation = (id: string, patch: Partial<EducationEntry>) => {
+    setProfile((p) => ({
+      ...p,
+      education: p.education.map((e) => e.id === id ? { ...e, ...patch } : e),
+    }));
+  };
+
+  const removeEducation = (id: string) => {
+    setProfile((p) => ({ ...p, education: p.education.filter((e) => e.id !== id) }));
+  };
+
+  // ─── 職歴 操作 ────────────────────────────────────────────────────────────
+  const addWork = () => {
+    const now = new Date();
+    const entry: WorkEntry = {
+      id: uuidv4(),
+      company: "",
+      entryYear: now.getFullYear(),
+      entryMonth: 4,
+      isCurrent: false,
+    };
+    setProfile((p) => ({ ...p, workHistory: [...p.workHistory, entry] }));
+  };
+
+  const updateWork = (id: string, patch: Partial<WorkEntry>) => {
+    setProfile((p) => ({
+      ...p,
+      workHistory: p.workHistory.map((e) => e.id === id ? { ...e, ...patch } : e),
+    }));
+  };
+
+  const removeWork = (id: string) => {
+    setProfile((p) => ({ ...p, workHistory: p.workHistory.filter((e) => e.id !== id) }));
   };
 
   const handleSave = async () => {
@@ -127,7 +188,9 @@ export function MypageClient({ userId, userEmail, initialProfile }: MypageClient
     }
   };
 
-  const hasAnyData = saved && Object.values(profile).some((v) => v !== "");
+  const hasAnyData = saved && Object.values(profile).some((v) =>
+    Array.isArray(v) ? v.length > 0 : v !== ""
+  );
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -195,8 +258,8 @@ export function MypageClient({ userId, userEmail, initialProfile }: MypageClient
                 <div className="grid grid-cols-2 gap-3">
                   <Field label="姓" value={profile.lastName} onChange={(v) => handleChange("lastName", v)} placeholder="山田" extraProps={makeKanaHandlers("lastNameKana")} />
                   <Field label="名" value={profile.firstName} onChange={(v) => handleChange("firstName", v)} placeholder="太郎" extraProps={makeKanaHandlers("firstNameKana")} />
-                  <Field label="せい（カナ）" value={profile.lastNameKana} onChange={(v) => handleChange("lastNameKana", v)} placeholder="ヤマダ" hint="漢字入力で自動入力" />
-                  <Field label="めい（カナ）" value={profile.firstNameKana} onChange={(v) => handleChange("firstNameKana", v)} placeholder="タロウ" hint="漢字入力で自動入力" />
+                  <Field label="せい（ふりがな）" value={profile.lastNameKana} onChange={(v) => handleChange("lastNameKana", v)} placeholder="やまだ" hint="漢字入力で自動入力" />
+                  <Field label="めい（ふりがな）" value={profile.firstNameKana} onChange={(v) => handleChange("firstNameKana", v)} placeholder="たろう" hint="漢字入力で自動入力" />
                 </div>
               ) : (
                 <div className="space-y-1">
@@ -297,9 +360,9 @@ export function MypageClient({ userId, userEmail, initialProfile }: MypageClient
               )}
             </Section>
 
-            {/* 保存ボタン */}
+            {/* 保存ボタン（基本情報のみ編集モードで表示） */}
             {isEditing && (
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-3 pt-2 border-t border-slate-100">
                 <button
                   onClick={handleSave}
                   disabled={isSaving}
@@ -311,7 +374,10 @@ export function MypageClient({ userId, userEmail, initialProfile }: MypageClient
                 {saved && (
                   <button
                     onClick={() => {
-                      setProfile(initialProfile ? { ...initialProfile } : { ...EMPTY_FORM });
+                      setProfile(initialProfile
+                        ? { ...initialProfile, education: initialProfile.education ?? [], workHistory: initialProfile.workHistory ?? [] }
+                        : { ...EMPTY_FORM }
+                      );
                       setIsEditing(false);
                     }}
                     className="flex items-center gap-2 text-slate-500 hover:text-slate-700 font-semibold px-4 py-2.5 rounded-xl border border-slate-200 transition-colors"
@@ -319,6 +385,123 @@ export function MypageClient({ userId, userEmail, initialProfile }: MypageClient
                     <X className="h-4 w-4" /> キャンセル
                   </button>
                 )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 学歴カード */}
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+            <div className="flex items-center gap-2">
+              <GraduationCap className="h-5 w-5 text-violet-500" />
+              <h2 className="font-bold text-slate-900">学歴</h2>
+              <span className="text-xs text-slate-400">（小学校〜大学）</span>
+            </div>
+            <button
+              onClick={addEducation}
+              className="flex items-center gap-1.5 text-sm text-violet-600 hover:text-violet-700 font-semibold"
+            >
+              <PlusCircle className="h-4 w-4" /> 追加
+            </button>
+          </div>
+
+          <div className="p-6 space-y-4">
+            {profile.education.length === 0 ? (
+              <button
+                onClick={addEducation}
+                className="w-full flex items-center justify-center gap-2 py-6 rounded-xl border-2 border-dashed border-slate-200 text-slate-400 hover:border-violet-300 hover:text-violet-500 transition-colors text-sm"
+              >
+                <PlusCircle className="h-4 w-4" /> 学歴を追加する
+              </button>
+            ) : (
+              <>
+                {profile.education.map((entry, index) => (
+                  <EducationEntryEditor
+                    key={entry.id}
+                    entry={entry}
+                    index={index}
+                    onChange={(patch) => updateEducation(entry.id, patch)}
+                    onRemove={() => removeEducation(entry.id)}
+                  />
+                ))}
+                <button
+                  onClick={addEducation}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-slate-200 text-slate-400 hover:border-violet-300 hover:text-violet-500 transition-colors text-sm font-medium"
+                >
+                  <PlusCircle className="h-4 w-4" /> 学歴を追加
+                </button>
+              </>
+            )}
+
+            {profile.education.length > 0 && (
+              <div className="flex gap-3 pt-2 border-t border-slate-100">
+                <button
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-2.5 rounded-xl transition-colors disabled:opacity-60"
+                >
+                  <Save className="h-4 w-4" />
+                  {isSaving ? "保存中..." : "保存する"}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 職歴カード */}
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+            <div className="flex items-center gap-2">
+              <BriefcaseBusiness className="h-5 w-5 text-sky-500" />
+              <h2 className="font-bold text-slate-900">職歴</h2>
+            </div>
+            <button
+              onClick={addWork}
+              className="flex items-center gap-1.5 text-sm text-sky-600 hover:text-sky-700 font-semibold"
+            >
+              <PlusCircle className="h-4 w-4" /> 追加
+            </button>
+          </div>
+
+          <div className="p-6 space-y-4">
+            {profile.workHistory.length === 0 ? (
+              <button
+                onClick={addWork}
+                className="w-full flex items-center justify-center gap-2 py-6 rounded-xl border-2 border-dashed border-slate-200 text-slate-400 hover:border-sky-300 hover:text-sky-500 transition-colors text-sm"
+              >
+                <PlusCircle className="h-4 w-4" /> 職歴を追加する
+              </button>
+            ) : (
+              <>
+                {profile.workHistory.map((entry, index) => (
+                  <WorkEntryEditor
+                    key={entry.id}
+                    entry={entry}
+                    index={index}
+                    onChange={(patch) => updateWork(entry.id, patch)}
+                    onRemove={() => removeWork(entry.id)}
+                  />
+                ))}
+                <button
+                  onClick={addWork}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-slate-200 text-slate-400 hover:border-sky-300 hover:text-sky-500 transition-colors text-sm font-medium"
+                >
+                  <PlusCircle className="h-4 w-4" /> 職歴を追加
+                </button>
+              </>
+            )}
+
+            {profile.workHistory.length > 0 && (
+              <div className="flex gap-3 pt-2 border-t border-slate-100">
+                <button
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-2.5 rounded-xl transition-colors disabled:opacity-60"
+                >
+                  <Save className="h-4 w-4" />
+                  {isSaving ? "保存中..." : "保存する"}
+                </button>
               </div>
             )}
           </div>
@@ -363,6 +546,220 @@ export function MypageClient({ userId, userEmail, initialProfile }: MypageClient
           </div>
         )}
       </main>
+    </div>
+  );
+}
+
+/* ── 学歴エントリ エディター ── */
+function EducationEntryEditor({
+  entry, index, onChange, onRemove,
+}: {
+  entry: EducationEntry;
+  index: number;
+  onChange: (patch: Partial<EducationEntry>) => void;
+  onRemove: () => void;
+}) {
+  const ENTRY_OPTIONS: { value: EducationEntryType; label: string }[] = [
+    { value: "enrolled", label: "入学" },
+    { value: "transferred_in", label: "転入" },
+  ];
+  const EXIT_OPTIONS: { value: EducationExitType; label: string }[] = [
+    { value: "graduated",    label: "卒業" },
+    { value: "transferred",  label: "転学" },
+    { value: "study_abroad", label: "留学" },
+    { value: "dropped_out",  label: "中退" },
+  ];
+
+  return (
+    <div className="rounded-xl border border-slate-200 p-4 space-y-3 bg-slate-50/50">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-violet-600">学歴 {index + 1}</span>
+        <button onClick={onRemove} className="text-slate-400 hover:text-red-500 transition-colors">
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="sm:col-span-2">
+          <label className="block text-xs text-slate-400 mb-1">学校名 <span className="text-red-400">*</span></label>
+          <input
+            value={entry.school}
+            onChange={(e) => onChange({ school: e.target.value })}
+            placeholder="○○高等学校"
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 placeholder:text-slate-300"
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">学部・学科</label>
+          <input
+            value={entry.faculty ?? ""}
+            onChange={(e) => onChange({ faculty: e.target.value })}
+            placeholder="経済学部（大学の場合）"
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 placeholder:text-slate-300"
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">学科</label>
+          <input
+            value={entry.department ?? ""}
+            onChange={(e) => onChange({ department: e.target.value })}
+            placeholder="経済学科"
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 placeholder:text-slate-300"
+          />
+        </div>
+      </div>
+
+      {/* 入学 */}
+      <div className="rounded-lg bg-white border border-slate-100 p-3 space-y-2">
+        <p className="text-xs font-semibold text-slate-500">入学</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <YMSelect years label="年" value={entry.entryYear} onChange={(v) => onChange({ entryYear: v })} />
+          <YMSelect months label="月" value={entry.entryMonth} onChange={(v) => onChange({ entryMonth: v })} />
+          <select
+            value={entry.entryType}
+            onChange={(e) => onChange({ entryType: e.target.value as EducationEntryType })}
+            className="rounded-lg border border-slate-200 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+          >
+            {ENTRY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {/* 卒業 */}
+      <div className="rounded-lg bg-white border border-slate-100 p-3 space-y-2">
+        <p className="text-xs font-semibold text-slate-500">卒業 / 修了</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <YMSelect years label="年" value={entry.exitYear ?? entry.entryYear} onChange={(v) => onChange({ exitYear: v })} />
+          <YMSelect months label="月" value={entry.exitMonth ?? entry.entryMonth} onChange={(v) => onChange({ exitMonth: v })} />
+          <select
+            value={entry.exitType ?? "graduated"}
+            onChange={(e) => onChange({ exitType: e.target.value as EducationExitType })}
+            className="rounded-lg border border-slate-200 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+          >
+            {EXIT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── 職歴エントリ エディター ── */
+function WorkEntryEditor({
+  entry, index, onChange, onRemove,
+}: {
+  entry: WorkEntry;
+  index: number;
+  onChange: (patch: Partial<WorkEntry>) => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="rounded-xl border border-slate-200 p-4 space-y-3 bg-slate-50/50">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-sky-600">職歴 {index + 1}</span>
+        <button onClick={onRemove} className="text-slate-400 hover:text-red-500 transition-colors">
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="sm:col-span-2">
+          <label className="block text-xs text-slate-400 mb-1">会社名 <span className="text-red-400">*</span></label>
+          <input
+            value={entry.company}
+            onChange={(e) => onChange({ company: e.target.value })}
+            placeholder="株式会社○○"
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300 placeholder:text-slate-300"
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">部署</label>
+          <input
+            value={entry.department ?? ""}
+            onChange={(e) => onChange({ department: e.target.value })}
+            placeholder="開発部"
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300 placeholder:text-slate-300"
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">役職・職種</label>
+          <input
+            value={entry.position ?? ""}
+            onChange={(e) => onChange({ position: e.target.value })}
+            placeholder="Webエンジニア"
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300 placeholder:text-slate-300"
+          />
+        </div>
+      </div>
+
+      {/* 入社 */}
+      <div className="rounded-lg bg-white border border-slate-100 p-3 space-y-2">
+        <p className="text-xs font-semibold text-slate-500">入社</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <YMSelect years label="年" value={entry.entryYear} onChange={(v) => onChange({ entryYear: v })} />
+          <YMSelect months label="月" value={entry.entryMonth} onChange={(v) => onChange({ entryMonth: v })} />
+        </div>
+      </div>
+
+      {/* 退社 */}
+      <div className="rounded-lg bg-white border border-slate-100 p-3 space-y-2">
+        <p className="text-xs font-semibold text-slate-500">退社</p>
+        <div className="flex flex-wrap items-center gap-2">
+          {!entry.isCurrent && (
+            <>
+              <YMSelect years label="年" value={entry.exitYear ?? entry.entryYear} onChange={(v) => onChange({ exitYear: v, isCurrent: false })} />
+              <YMSelect months label="月" value={entry.exitMonth ?? entry.entryMonth} onChange={(v) => onChange({ exitMonth: v, isCurrent: false })} />
+            </>
+          )}
+          <button
+            type="button"
+            onClick={() => onChange({ isCurrent: !entry.isCurrent, exitYear: undefined, exitMonth: undefined })}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border-2 transition-all ${
+              entry.isCurrent
+                ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                : "border-slate-200 text-slate-500 hover:border-slate-300"
+            }`}
+          >
+            在職中（現在に至る）
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-xs text-slate-400 mb-1">業務内容</label>
+        <textarea
+          value={entry.description ?? ""}
+          onChange={(e) => onChange({ description: e.target.value })}
+          placeholder="担当業務・実績を記載してください"
+          rows={3}
+          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300 placeholder:text-slate-300 resize-none"
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ── 年月セレクト ── */
+function YMSelect({
+  label, value, onChange, years, months,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  years?: boolean;
+  months?: boolean;
+}) {
+  const options = years ? YEARS : months ? MONTHS : [];
+  return (
+    <div className="flex items-center gap-1">
+      <select
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="rounded-lg border border-slate-200 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+      >
+        {options.map((o) => <option key={o} value={o}>{o}</option>)}
+      </select>
+      <span className="text-xs text-slate-400">{label}</span>
     </div>
   );
 }

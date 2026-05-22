@@ -12,6 +12,9 @@ import { cn } from "@/lib/utils";
 import type { EnclosureItem } from "@/types/coverLetter";
 import { ProfileSyncBar } from "@/components/molecules/ProfileSyncBar";
 import { useProfileStore } from "@/store/profileStore";
+import { useAuthStore } from "@/store/authStore";
+import { AuthModal } from "@/components/organisms/AuthModal";
+import { ConsultationSheet } from "@/components/organisms/ConsultationSheet";
 
 const inputCls = "w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white";
 const labelCls = "block text-sm font-semibold text-slate-700 mb-1";
@@ -35,7 +38,9 @@ export function CoverLetterFormLayout() {
   const autoSaveStatus    = useCoverLetterStore((s) => s.autoSaveStatus);
   const [step, setStep]   = useState(1);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showConsultSheet, setShowConsultSheet] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { user, openAuthModal } = useAuthStore();
 
   useEffect(() => { initNew(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -50,7 +55,7 @@ export function CoverLetterFormLayout() {
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [current, saveCurrentToList, setAutoSaveStatus]);
 
-  const handleDownload = async () => {
+  const executeDownload = async () => {
     if (!current) return;
     setIsGenerating(true);
     try {
@@ -62,7 +67,16 @@ export function CoverLetterFormLayout() {
       const a = document.createElement("a");
       a.href = url; a.download = `${current.title}.pdf`; a.click();
       URL.revokeObjectURL(url);
+      setShowConsultSheet(true);
     } finally { setIsGenerating(false); }
+  };
+
+  const handleDownload = () => {
+    if (!user) {
+      openAuthModal(typeof window !== "undefined" ? window.location.pathname + window.location.search : "/");
+      return;
+    }
+    void executeDownload();
   };
 
   const { saveProfile, profile: savedProfile } = useProfileStore();
@@ -203,6 +217,15 @@ export function CoverLetterFormLayout() {
           )}
         </div>
       </main>
+
+      <AuthModal />
+      <ConsultationSheet
+        open={showConsultSheet}
+        onClose={() => setShowConsultSheet(false)}
+        name={`${current.yourLastName}${current.yourFirstName}`}
+        email={current.yourEmail ?? ""}
+        phone={current.yourPhone ?? ""}
+      />
     </div>
   );
 }

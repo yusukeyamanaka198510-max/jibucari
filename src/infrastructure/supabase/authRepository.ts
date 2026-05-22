@@ -9,6 +9,7 @@ export interface AuthCredentials {
 export interface AuthRepository {
   signUp(credentials: AuthCredentials): Promise<User>;
   signIn(credentials: AuthCredentials): Promise<User>;
+  signInWithGoogle(redirectTo: string): Promise<void>;
   signOut(): Promise<void>;
   getUser(): Promise<User | null>;
 }
@@ -38,6 +39,14 @@ export class SupabaseAuthRepository implements AuthRepository {
     if (error) throw new Error(error.message);
     if (!data.user) throw new Error("ログインに失敗しました");
     return data.user;
+  }
+
+  async signInWithGoogle(redirectTo: string): Promise<void> {
+    const { error } = await this.supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo },
+    });
+    if (error) throw new Error(error.message);
   }
 
   async signOut(): Promise<void> {
