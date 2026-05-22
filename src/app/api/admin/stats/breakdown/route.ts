@@ -167,5 +167,3 @@ export async function GET(request: Request) {
   }
 }
 
-// action_types エクスポート（フロントエンドで使用）
-export { ACTION_TYPES };
