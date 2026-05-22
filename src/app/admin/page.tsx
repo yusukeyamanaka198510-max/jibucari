@@ -26,6 +26,7 @@ import {
   AccessTrendChart,
   EducationSegmentChart,
 } from "./DashboardCharts";
+import { DashboardStats } from "./DashboardStats";
 
 export const metadata: Metadata = { title: "ダッシュボード | ジブキャリ管理" };
 
@@ -96,49 +97,6 @@ export default function AdminDashboardPage() {
   const accessTrend = getAccessTrend();
   const educationSegments = getEducationSegments();
 
-  const statCards = [
-    {
-      label: "総ユーザー数",
-      value: stats.totalUsers,
-      icon: Users,
-      color: "text-indigo-600",
-      bg: "bg-indigo-50",
-      border: "border-indigo-100",
-    },
-    {
-      label: "総履歴書数",
-      value: stats.totalResumes,
-      icon: FileText,
-      color: "text-violet-600",
-      bg: "bg-violet-50",
-      border: "border-violet-100",
-    },
-    {
-      label: "PDF書き出し",
-      value: stats.totalPdfDownloads,
-      icon: Download,
-      color: "text-blue-600",
-      bg: "bg-blue-50",
-      border: "border-blue-100",
-    },
-    {
-      label: "メール転送",
-      value: stats.totalPdfEmails,
-      icon: Mail,
-      color: "text-emerald-600",
-      bg: "bg-emerald-50",
-      border: "border-emerald-100",
-    },
-    {
-      label: "面談リクエスト",
-      value: stats.totalInterviewRequests,
-      icon: MessageSquare,
-      color: "text-amber-600",
-      bg: "bg-amber-50",
-      border: "border-amber-100",
-    },
-  ];
-
   const topUsers = [...MOCK_USERS]
     .sort(
       (a, b) =>
@@ -162,22 +120,13 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Stats grid */}
-      <div className="grid grid-cols-2 xl:grid-cols-5 gap-4">
-        {statCards.map(({ label, value, icon: Icon, color, bg, border }) => (
-          <div
-            key={label}
-            className={`bg-white rounded-2xl border ${border} p-5 space-y-3`}
-          >
-            <div className={`w-10 h-10 rounded-xl ${bg} flex items-center justify-center`}>
-              <Icon className={`w-5 h-5 ${color}`} />
-            </div>
-            <div>
-              <p className="text-3xl font-black text-slate-900">{value.toLocaleString()}</p>
-              <p className="text-xs text-slate-500 mt-0.5 font-medium">{label}</p>
-            </div>
-          </div>
-        ))}
-      </div>
+      <DashboardStats
+        totalUsers={stats.totalUsers}
+        totalResumes={stats.totalResumes}
+        totalPdfDownloads={stats.totalPdfDownloads}
+        totalPdfEmails={stats.totalPdfEmails}
+        totalInterviewRequests={stats.totalInterviewRequests}
+      />
 
       {/* Analytics Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
