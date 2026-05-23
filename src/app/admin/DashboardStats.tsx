@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Users, FileText, Download, Mail, MessageSquare } from "lucide-react";
+import { Users, FileText, Download, Mail, MessageSquare, Sparkles } from "lucide-react";
 import type { ComponentType } from "react";
 import { StatDetailModal } from "./StatDetailModal";
+import { AIAnalysisModal } from "./AIAnalysisModal";
 
 type Metric = "users" | "resumes" | "pdf_download" | "pdf_email" | "interview_request";
 
@@ -34,6 +35,7 @@ export function DashboardStats({
 }: DashboardStatsProps) {
   const [selectedMetric, setSelectedMetric] = useState<Metric | null>(null);
   const [selectedLabel, setSelectedLabel] = useState<string>("");
+  const [analysisOpen, setAnalysisOpen] = useState(false);
 
   const statCards: StatCardData[] = [
     {
@@ -95,6 +97,19 @@ export function DashboardStats({
 
   return (
     <>
+      {/* AI分析ボタン */}
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => setAnalysisOpen(true)}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 text-white text-sm font-semibold shadow hover:shadow-md hover:from-indigo-600 hover:to-violet-700 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2"
+        >
+          <Sparkles className="w-4 h-4" />
+          AI で現状分析
+        </button>
+      </div>
+
+      {/* Stat cards */}
       <div className="grid grid-cols-2 xl:grid-cols-5 gap-4">
         {statCards.map(({ label, value, icon: Icon, color, bg, border, metric }) => (
           <button
@@ -119,6 +134,11 @@ export function DashboardStats({
         metric={selectedMetric}
         label={selectedLabel}
         onClose={handleClose}
+      />
+
+      <AIAnalysisModal
+        isOpen={analysisOpen}
+        onClose={() => setAnalysisOpen(false)}
       />
     </>
   );
