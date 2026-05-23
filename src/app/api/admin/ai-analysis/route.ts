@@ -128,7 +128,7 @@ ${Object.entries(monthlyActions).sort().map(([ym, acts]) =>
 ).join("\n") || "- データなし"}`;
 
     // ── Gemini REST API ストリーミング ────────────────────────
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?key=${geminiKey}&alt=sse`;
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:streamGenerateContent?key=${geminiKey}&alt=sse`;
 
     const geminiRes = await fetch(geminiUrl, {
       method: "POST",
