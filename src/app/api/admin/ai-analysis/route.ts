@@ -4,13 +4,16 @@ import { createAdminClient, adminUnavailable } from "@/lib/adminClient";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
+const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
+const GROQ_MODEL = "llama-3.3-70b-versatile";
+
 export async function POST() {
   const admin = createAdminClient();
   if (!admin) return adminUnavailable();
 
-  const geminiKey = process.env.GEMINI_API_KEY;
-  if (!geminiKey) {
-    return NextResponse.json({ error: "GEMINI_API_KEY is not set" }, { status: 500 });
+  const groqKey = process.env.GROQ_API_KEY;
+  if (!groqKey) {
+    return NextResponse.json({ error: "GROQ_API_KEY is not set" }, { status: 500 });
   }
 
   try {
@@ -127,35 +130,39 @@ ${Object.entries(monthlyActions).sort().map(([ym, acts]) =>
   `- ${ym}: PDF=${acts["pdf_download"] ?? 0}, メール=${acts["pdf_email"] ?? 0}, 面談=${acts["interview_request"] ?? 0}, 履歴書作成=${acts["resume_created"] ?? 0}, 更新=${acts["resume_updated"] ?? 0}`
 ).join("\n") || "- データなし"}`;
 
-    // ── Gemini REST API ストリーミング ────────────────────────
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?key=${geminiKey}&alt=sse`;
-
-    const geminiRes = await fetch(geminiUrl, {
+    // ── Groq API ストリーミング ───────────────────────────────
+    const groqRes = await fetch(GROQ_API_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${groqKey}`,
+      },
       body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: { maxOutputTokens: 2048, temperature: 0.7 },
+        model: GROQ_MODEL,
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 2048,
+        temperature: 0.7,
+        stream: true,
       }),
     });
 
-    if (!geminiRes.ok) {
-      const errText = await geminiRes.text();
+    if (!groqRes.ok) {
+      const errText = await groqRes.text();
       return NextResponse.json({ error: errText }, { status: 500 });
     }
 
     const encoder = new TextEncoder();
-    const geminiBody = geminiRes.body;
+    const groqBody = groqRes.body;
 
     const stream = new ReadableStream({
       async start(controller) {
-        if (!geminiBody) {
+        if (!groqBody) {
           controller.enqueue(encoder.encode('data: {"error":"No response body"}\n\n'));
           controller.close();
           return;
         }
 
-        const reader = geminiBody.getReader();
+        const reader = groqBody.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
 
@@ -174,11 +181,11 @@ ${Object.entries(monthlyActions).sort().map(([ym, acts]) =>
               if (!raw || raw === "[DONE]") continue;
               try {
                 const parsed = JSON.parse(raw) as {
-                  candidates?: Array<{
-                    content?: { parts?: Array<{ text?: string }> };
+                  choices?: Array<{
+                    delta?: { content?: string };
                   }>;
                 };
-                const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+                const text = parsed.choices?.[0]?.delta?.content;
                 if (text) {
                   controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`));
                 }
