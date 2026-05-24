@@ -17,6 +17,7 @@ import type {
   JobHuntStatus,
 } from "@/types/admin";
 import { EDUCATION_LEVEL_LABELS, JOB_HUNT_STATUS_LABELS } from "@/types/admin";
+import { getUniversityRank } from "@/lib/universityRankings";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -28,7 +29,7 @@ function formatDate(iso: string) {
   });
 }
 
-type SortKey = "createdAt" | "pdfDownloadCount" | "actionCount" | "resumeCount";
+type SortKey = "createdAt" | "pdfDownloadCount" | "actionCount" | "resumeCount" | "hensachi";
 type SortDir = "asc" | "desc";
 
 // ── Sort icon ─────────────────────────────────────────────────────────────────
@@ -350,6 +351,7 @@ export function UsersClient() {
                 <tr>
                   {th("名前 / メール")}
                   {th("学歴")}
+                  {th("大学名 / 偏差値", "hensachi")}
                   {th("求職状況")}
                   {th("都道府県")}
                   {th("登録日", "createdAt")}
@@ -362,7 +364,7 @@ export function UsersClient() {
               <tbody className="divide-y divide-slate-50">
                 {data.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="text-center py-16 text-slate-400 text-sm">
+                    <td colSpan={10} className="text-center py-16 text-slate-400 text-sm">
                       該当するユーザーが見つかりません
                     </td>
                   </tr>
@@ -379,6 +381,18 @@ export function UsersClient() {
                       </td>
                       <td className="px-4 py-4 text-sm text-slate-600 whitespace-nowrap">
                         {user.educationLevel ? (EDUCATION_LEVEL_LABELS[user.educationLevel] ?? "—") : "—"}
+                      </td>
+                      <td className="px-4 py-4">
+                        {user.universityName ? (
+                          <div>
+                            <p className="text-sm text-slate-700">{user.universityName}</p>
+                            {getUniversityRank(user.universityName) !== null && (
+                              <span className="text-xs text-indigo-600 font-semibold">#{getUniversityRank(user.universityName)}</span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-slate-300">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-4 text-sm text-slate-600 whitespace-nowrap">
                         {user.jobHuntStatus ? (JOB_HUNT_STATUS_LABELS[user.jobHuntStatus] ?? "—") : "—"}

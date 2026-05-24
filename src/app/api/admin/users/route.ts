@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createAdminClient, adminUnavailable } from "@/lib/adminClient";
-import type { UserSearchFilters } from "@/types/admin";
+import type { AdminUserProfile, UserSearchFilters } from "@/types/admin";
+import { getUniversityRank } from "@/lib/universityRankings";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,11 @@ export async function GET(req: NextRequest) {
 
   const sp = req.nextUrl.searchParams;
 
+  const sortByParam = sp.get("sortBy") ?? "createdAt";
+  const sortDirParam = (sp.get("sortDir") ?? "desc") as "asc" | "desc";
+  const page = sp.get("page") ? Number(sp.get("page")) : 1;
+  const perPage = sp.get("perPage") ? Number(sp.get("perPage")) : 20;
+
   const filters: UserSearchFilters = {
     q:             sp.get("q")             ?? undefined,
     educationLevel: (sp.get("educationLevel") ?? undefined) as UserSearchFilters["educationLevel"],
@@ -30,14 +36,64 @@ export async function GET(req: NextRequest) {
     actionType:    (sp.get("actionType")   ?? undefined) as UserSearchFilters["actionType"],
     registeredFrom: sp.get("registeredFrom") ?? undefined,
     registeredTo:   sp.get("registeredTo")   ?? undefined,
-    sortBy:        (sp.get("sortBy") ?? "created_at") as UserSearchFilters["sortBy"],
-    sortDir:       (sp.get("sortDir") ?? "desc")      as UserSearchFilters["sortDir"],
-    page:          sp.get("page")    ? Number(sp.get("page"))    : 1,
-    perPage:       sp.get("perPage") ? Number(sp.get("perPage")) : 20,
+    sortBy:        "created_at",
+    sortDir:       "desc",
+    page:          1,
+    perPage:       20,
   };
 
   try {
-    // Supabase RPC で PostgreSQL 関数を呼び出す
+    if (sortByParam === "hensachi") {
+      // Fetch all matching users (DB doesn't know about hensachi sort)
+      const { data, error } = await admin.rpc("admin_search_users", {
+        p_query:      filters.q          ?? null,
+        p_education:  filters.educationLevel ?? null,
+        p_job_status: filters.jobHuntStatus  ?? null,
+        p_prefecture: filters.prefecture ?? null,
+        p_gender:     filters.gender     ?? null,
+        p_age_min:    filters.ageMin     ?? null,
+        p_age_max:    filters.ageMax     ?? null,
+        p_tag:        filters.tag        ?? null,
+        p_action_type: filters.actionType ?? null,
+        p_reg_from:   filters.registeredFrom ?? null,
+        p_reg_to:     filters.registeredTo   ?? null,
+        p_sort_by:    "created_at",
+        p_sort_dir:   "desc",
+        p_page:       1,
+        p_per_page:   9999,
+      });
+
+      if (error) throw error;
+
+      const allUsers = (data as { data: AdminUserProfile[] }).data ?? [];
+
+      // Sort by university rank; nulls always at end
+      const sorted = [...allUsers].sort((a, b) => {
+        const ra = getUniversityRank(a.universityName);
+        const rb = getUniversityRank(b.universityName);
+        if (ra === null && rb === null) return 0;
+        if (ra === null) return 1;
+        if (rb === null) return -1;
+        return sortDirParam === "asc" ? ra - rb : rb - ra;
+      });
+
+      const total = sorted.length;
+      const slice = sorted.slice((page - 1) * perPage, page * perPage);
+
+      return NextResponse.json({
+        data: slice,
+        total,
+        page,
+        perPage,
+        totalPages: Math.ceil(total / perPage),
+      });
+    }
+
+    // Non-hensachi sort: pass through to DB
+    const dbSortBy = sortByParam === "createdAt" ? "created_at"
+      : sortByParam === "lastActiveAt" ? "last_active_at"
+      : "created_at";
+
     const { data, error } = await admin.rpc("admin_search_users", {
       p_query:      filters.q          ?? null,
       p_education:  filters.educationLevel ?? null,
@@ -50,10 +106,10 @@ export async function GET(req: NextRequest) {
       p_action_type: filters.actionType ?? null,
       p_reg_from:   filters.registeredFrom ?? null,
       p_reg_to:     filters.registeredTo   ?? null,
-      p_sort_by:    filters.sortBy     ?? "created_at",
-      p_sort_dir:   filters.sortDir    ?? "desc",
-      p_page:       filters.page       ?? 1,
-      p_per_page:   filters.perPage    ?? 20,
+      p_sort_by:    dbSortBy,
+      p_sort_dir:   sortDirParam,
+      p_page:       page,
+      p_per_page:   perPage,
     });
 
     if (error) throw error;

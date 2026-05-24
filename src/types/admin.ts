@@ -49,6 +49,7 @@ export interface AdminUserProfile {
   gender: string;
   prefecture: string;
   educationLevel: EducationLevel | null;
+  universityName: string | null;
   jobHuntStatus: JobHuntStatus | null;
   desiredIndustry: string[] | null;
   lastActiveAt: string | null;
