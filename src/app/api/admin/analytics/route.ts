@@ -1,30 +1,46 @@
-import { NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { createAdminClient, adminUnavailable } from "@/lib/adminClient";
 
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/admin/analytics
- * 詳細なアクセス・行動分析データを返す。
+ * GET /api/admin/analytics?from=YYYY-MM-DD&to=YYYY-MM-DD
  *
- * 返すデータ:
- * - pageViews: ページ別の閲覧数
- * - ctaClicks: CTAボタン別の押下回数
- * - resumeFunnel: 履歴書作成ファネル（各段階の人数）
- * - registerWithResume: 履歴書作成完了 → 会員登録した数
- * - interviewRequests: 面談リクエスト数（内、希望日時あり）
- * - actionBreakdown: アクション種別の全件集計
- * - recentInterviews: 最近の面談リクエスト一覧（希望日時含む）
+ * from/to 未指定時は直近7日間をデフォルトとする。
+ * "all" を指定すると全期間を対象にする。
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
   const admin = createAdminClient();
   if (!admin) return adminUnavailable();
 
+  const { searchParams } = new URL(req.url);
+  const fromParam = searchParams.get("from");
+  const toParam   = searchParams.get("to");
+  const allTime   = searchParams.get("range") === "all";
+
+  // デフォルト: 直近7日
+  const now = new Date();
+  const defaultFrom = new Date(now);
+  defaultFrom.setDate(defaultFrom.getDate() - 7);
+
+  let fromDate: string;
+  let toDate: string;
+
+  if (allTime) {
+    fromDate = "2020-01-01T00:00:00.000Z"; // 十分に古い日付
+    toDate   = new Date(now.getTime() + 86400000).toISOString(); // 明日まで
+  } else {
+    fromDate = fromParam ? `${fromParam}T00:00:00.000Z` : defaultFrom.toISOString();
+    toDate   = toParam   ? `${toParam}T23:59:59.999Z`   : new Date(now.getTime() + 86400000).toISOString();
+  }
+
   try {
-    // 全アクションログを取得（集計用）
+    // 指定期間のアクションログを取得
     const { data: allLogs, error: logsErr } = await admin
       .from("action_logs")
       .select("id, user_id, action_type, target_id, metadata, created_at")
+      .gte("created_at", fromDate)
+      .lte("created_at", toDate)
       .order("created_at", { ascending: false });
 
     if (logsErr) throw logsErr;
@@ -44,7 +60,7 @@ export async function GET() {
       actionBreakdown[log.action_type] = (actionBreakdown[log.action_type] ?? 0) + 1;
     }
 
-    // 2. ページ別閲覧数（action_type = 'page_view' の metadata.page か target_id を使用）
+    // 2. ページ別閲覧数
     const pageViewCounts: Record<string, number> = {};
     for (const log of logs) {
       if (log.action_type === "page_view") {
@@ -76,20 +92,15 @@ export async function GET() {
       })
     );
 
-    // 4. 履歴書作成ファネル
-    // ステップ1: ログインorアカウント作成（register + login）
-    // ステップ2: 履歴書作成開始（resume_created）
-    // ステップ3: 履歴書を保存/更新（resume_updated）
-    // ステップ4: PDF書き出し（pdf_download or pdf_email）
-
-    const usersWithRegister    = new Set(logs.filter((l) => l.action_type === "register").map((l) => l.user_id));
-    const usersWithResume      = new Set(logs.filter((l) => l.action_type === "resume_created").map((l) => l.user_id));
+    // 4. 履歴書作成ファネル（期間内に各アクションを行ったユニークユーザー数）
+    const usersWithRegister     = new Set(logs.filter((l) => l.action_type === "register").map((l) => l.user_id));
+    const usersWithResume       = new Set(logs.filter((l) => l.action_type === "resume_created").map((l) => l.user_id));
     const usersWithResumeUpdate = new Set(logs.filter((l) => l.action_type === "resume_updated").map((l) => l.user_id));
     const usersWithPdf          = new Set(
       logs.filter((l) => l.action_type === "pdf_download" || l.action_type === "pdf_email").map((l) => l.user_id)
     );
 
-    // 全ユーザー数を取得
+    // 全ユーザー数（期間に関係なく累計）
     const { count: totalUsers } = await admin
       .from("profiles")
       .select("id", { count: "exact", head: true });
@@ -101,42 +112,31 @@ export async function GET() {
       { step: 4, label: "PDF書き出し",        count: usersWithPdf.size },
     ];
 
-    // 5. 履歴書作成完了 → 会員登録まで行った数（resume_created AND register の両方を持つユーザー）
+    // 5. 履歴書作成完了 → 会員登録まで行った数
     const registerWithResumeCount = [...usersWithRegister].filter((uid) => usersWithResume.has(uid)).length;
 
     // 6. 面談リクエスト数
     const interviewLogs = logs.filter((l) => l.action_type === "interview_request");
     const interviewTotal = interviewLogs.length;
 
-    // 希望日時あり = metadata に preferred_date / date / datetime などがあるもの
-    const interviewWithDatetime = interviewLogs.filter((l) => {
-      if (!l.metadata) return false;
+    const hasDatetime = (l: typeof logs[number]) => {
       const m = l.metadata;
+      if (!m) return false;
       return !!(
-        m["preferred_date"] ??
-        m["preferredDate"] ??
-        m["date"] ??
-        m["datetime"] ??
-        m["preferred_datetime"] ??
-        m["scheduledAt"]
+        m["preferred_date"] ?? m["preferredDate"] ?? m["date"] ??
+        m["datetime"] ?? m["preferred_datetime"] ?? m["scheduledAt"]
       );
-    });
+    };
 
-    // 最近の面談リクエスト一覧（最大20件）
+    const interviewWithDatetime = interviewLogs.filter(hasDatetime);
+
     const recentInterviews = interviewLogs.slice(0, 20).map((l) => ({
-      id:             l.id,
-      userId:         l.user_id,
-      targetId:       l.target_id,
-      metadata:       l.metadata,
-      createdAt:      l.created_at,
-      hasDatetime: !!(
-        l.metadata?.["preferred_date"] ??
-        l.metadata?.["preferredDate"] ??
-        l.metadata?.["date"] ??
-        l.metadata?.["datetime"] ??
-        l.metadata?.["preferred_datetime"] ??
-        l.metadata?.["scheduledAt"]
-      ),
+      id:          l.id,
+      userId:      l.user_id,
+      targetId:    l.target_id,
+      metadata:    l.metadata,
+      createdAt:   l.created_at,
+      hasDatetime: hasDatetime(l),
     }));
 
     // ページ別閲覧数トップ20
@@ -147,6 +147,8 @@ export async function GET() {
 
     return NextResponse.json({
       data: {
+        fromDate: allTime ? null : fromDate.slice(0, 10),
+        toDate:   allTime ? null : toDate.slice(0, 10),
         totalPageViews,
         topPageViews,
         ctaClicks,
