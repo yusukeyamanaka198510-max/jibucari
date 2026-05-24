@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -10,6 +10,12 @@ import {
   ExternalLink,
   SlidersHorizontal,
   X,
+  Mail,
+  CheckSquare,
+  Square,
+  Send,
+  AlertCircle,
+  CheckCircle,
 } from "lucide-react";
 import type {
   AdminUserProfile,
@@ -60,6 +66,206 @@ function TableSkeleton() {
   );
 }
 
+// ── Bulk Email Modal ──────────────────────────────────────────────────────────
+
+type SendStatus = "idle" | "sending" | "success" | "error";
+
+interface BulkEmailResult {
+  sentCount: number;
+  failedCount: number;
+  totalRecipients: number;
+  errors?: string[];
+}
+
+function BulkEmailModal({
+  selectedIds,
+  selectedUsers,
+  onClose,
+}: {
+  selectedIds: Set<string>;
+  selectedUsers: AdminUserProfile[];
+  onClose: () => void;
+}) {
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+  const [status, setStatus] = useState<SendStatus>("idle");
+  const [result, setResult] = useState<BulkEmailResult | null>(null);
+  const [errMsg, setErrMsg] = useState<string | null>(null);
+
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!subject.trim() || !body.trim()) return;
+    setStatus("sending");
+    setErrMsg(null);
+    try {
+      const res = await fetch("/api/admin/bulk-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userIds: Array.from(selectedIds),
+          subject,
+          body,
+        }),
+        cache: "no-store",
+      });
+      const json = (await res.json()) as BulkEmailResult & { error?: string };
+      if (!res.ok) {
+        setErrMsg(json.error ?? `エラー: ${res.status}`);
+        setStatus("error");
+        return;
+      }
+      setResult(json);
+      setStatus("success");
+    } catch (e) {
+      setErrMsg(e instanceof Error ? e.message : "通信エラーが発生しました");
+      setStatus("error");
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center">
+              <Mail className="w-4 h-4 text-indigo-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-black text-slate-900">一括メール送信</h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {selectedIds.size} 名に送信
+              </p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-700 transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
+          {/* 送信先プレビュー */}
+          <div className="bg-slate-50 rounded-xl p-4">
+            <p className="text-xs font-bold text-slate-500 mb-2">送信先（{selectedIds.size} 名）</p>
+            <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
+              {selectedUsers.map((u) => (
+                <span
+                  key={u.id}
+                  className="inline-flex items-center gap-1 text-xs bg-white border border-slate-200 text-slate-700 px-2 py-1 rounded-lg font-medium"
+                >
+                  {u.lastName} {u.firstName}
+                  <span className="text-slate-400">({u.email})</span>
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {status === "success" && result ? (
+            /* 送信結果 */
+            <div className="space-y-4">
+              <div className="flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+                <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-bold text-emerald-800">送信完了</p>
+                  <p className="text-sm text-emerald-700 mt-1">
+                    {result.totalRecipients} 名中 <span className="font-bold">{result.sentCount} 名</span> に送信しました
+                    {result.failedCount > 0 && (
+                      <span className="text-red-600 ml-1">（{result.failedCount} 名失敗）</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+              {result.errors && result.errors.length > 0 && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                  <p className="text-xs font-bold text-red-600 mb-2">送信エラー詳細</p>
+                  <ul className="space-y-1">
+                    {result.errors.map((e, i) => (
+                      <li key={i} className="text-xs text-red-600 font-mono">{e}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <div className="flex justify-end">
+                <button
+                  onClick={onClose}
+                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors"
+                >
+                  閉じる
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* 送信フォーム */
+            <form onSubmit={handleSend} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1.5">
+                  件名 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  required
+                  disabled={status === "sending"}
+                  placeholder="件名を入力..."
+                  className="w-full text-sm border border-slate-200 rounded-xl px-4 py-2.5 bg-white text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 disabled:opacity-60"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1.5">
+                  本文 <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  required
+                  disabled={status === "sending"}
+                  rows={10}
+                  placeholder={"本文を入力...\n\n※ {{name}} で宛名、{{email}} でメールアドレスを差し込めます"}
+                  className="w-full text-sm border border-slate-200 rounded-xl px-4 py-2.5 bg-white text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none disabled:opacity-60 font-mono"
+                />
+                <p className="text-xs text-slate-400 mt-1">
+                  差し込み変数: <code className="bg-slate-100 px-1 py-0.5 rounded">&#123;&#123;name&#125;&#125;</code> = 氏名、<code className="bg-slate-100 px-1 py-0.5 rounded">&#123;&#123;email&#125;&#125;</code> = メールアドレス
+                </p>
+              </div>
+
+              {status === "error" && errMsg && (
+                <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-3">
+                  <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                  <p className="text-sm text-red-600">{errMsg}</p>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between pt-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  disabled={status === "sending"}
+                  className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-800 disabled:opacity-50 transition-colors"
+                >
+                  キャンセル
+                </button>
+                <button
+                  type="submit"
+                  disabled={status === "sending" || !subject.trim() || !body.trim()}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-bold rounded-xl transition-colors"
+                >
+                  <Send className="w-4 h-4" />
+                  {status === "sending" ? "送信中..." : `${selectedIds.size} 名に送信`}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 const PER_PAGE = 20;
@@ -98,6 +304,16 @@ export function UsersClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [unavailable, setUnavailable] = useState(false);
+
+  // Selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const prevDataRef = useRef<AdminUserProfile[]>([]);
+
+  // Deselect when page changes
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [page, query, educationLevel, jobHuntStatus, prefecture, gender, ageMin, ageMax, tag]);
 
   const handleSort = (key: SortKey) => {
     if (key === sortBy) {
@@ -142,6 +358,7 @@ export function UsersClient() {
       }
       const json = (await res.json()) as ApiResponse;
       setData(json.data);
+      prevDataRef.current = json.data;
       setTotal(json.total);
       setTotalPages(json.totalPages);
     } catch (e) {
@@ -157,6 +374,39 @@ export function UsersClient() {
 
   // Reset page when filters change
   const resetPage = () => setPage(1);
+
+  // Selection helpers
+  const allCurrentIds = data.map((u) => u.id);
+  const allSelected = allCurrentIds.length > 0 && allCurrentIds.every((id) => selectedIds.has(id));
+  const someSelected = allCurrentIds.some((id) => selectedIds.has(id));
+
+  const toggleAll = () => {
+    if (allSelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        allCurrentIds.forEach((id) => next.delete(id));
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        allCurrentIds.forEach((id) => next.add(id));
+        return next;
+      });
+    }
+  };
+
+  const toggleOne = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  // Collect full user objects for selected IDs (across pages we've seen)
+  const selectedUsers = data.filter((u) => selectedIds.has(u.id));
 
   const th = (label: string, key?: SortKey) => (
     <th
@@ -206,7 +456,21 @@ export function UsersClient() {
           )}
         </button>
 
+        {/* Bulk select / email */}
+        {selectedIds.size > 0 && (
+          <button
+            onClick={() => setShowEmailModal(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold transition-colors shadow-sm"
+          >
+            <Mail className="w-4 h-4" />
+            {selectedIds.size} 名にメール送信
+          </button>
+        )}
+
         <p className="text-sm text-slate-500 ml-auto shrink-0">
+          {selectedIds.size > 0 && (
+            <span className="mr-2 text-indigo-600 font-bold">{selectedIds.size} 名選択中</span>
+          )}
           <span className="font-semibold text-slate-800">{total}</span> 件
         </p>
       </div>
@@ -349,6 +613,23 @@ export function UsersClient() {
             <table className="min-w-full divide-y divide-slate-100">
               <thead className="bg-slate-50">
                 <tr>
+                  {/* Checkbox column */}
+                  <th className="pl-4 pr-2 py-3 w-10">
+                    <button
+                      type="button"
+                      onClick={toggleAll}
+                      title={allSelected ? "全て解除" : "全て選択"}
+                      className="text-slate-400 hover:text-indigo-600 transition-colors"
+                    >
+                      {allSelected ? (
+                        <CheckSquare className="w-4 h-4 text-indigo-600" />
+                      ) : someSelected ? (
+                        <CheckSquare className="w-4 h-4 text-indigo-300" />
+                      ) : (
+                        <Square className="w-4 h-4" />
+                      )}
+                    </button>
+                  </th>
                   {th("名前 / メール")}
                   {th("学歴")}
                   {th("大学名 / 偏差値", "hensachi")}
@@ -364,65 +645,85 @@ export function UsersClient() {
               <tbody className="divide-y divide-slate-50">
                 {data.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="text-center py-16 text-slate-400 text-sm">
+                    <td colSpan={11} className="text-center py-16 text-slate-400 text-sm">
                       該当するユーザーが見つかりません
                     </td>
                   </tr>
                 ) : (
-                  data.map((user) => (
-                    <tr key={user.id} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="px-4 py-4">
-                        <div>
-                          <p className="text-sm font-semibold text-slate-800">
-                            {user.lastName} {user.firstName}
-                          </p>
-                          <p className="text-xs text-slate-400 mt-0.5">{user.email}</p>
-                        </div>
-                      </td>
-                      <td className="px-4 py-4 text-sm text-slate-600 whitespace-nowrap">
-                        {user.educationLevel ? (EDUCATION_LEVEL_LABELS[user.educationLevel] ?? "—") : "—"}
-                      </td>
-                      <td className="px-4 py-4">
-                        {user.universityName ? (
-                          <div>
-                            <p className="text-sm text-slate-700">{user.universityName}</p>
-                            {getUniversityRank(user.universityName) !== null && (
-                              <span className="text-xs text-indigo-600 font-semibold">#{getUniversityRank(user.universityName)}</span>
+                  data.map((user) => {
+                    const isSelected = selectedIds.has(user.id);
+                    return (
+                      <tr
+                        key={user.id}
+                        className={`transition-colors ${isSelected ? "bg-indigo-50/60" : "hover:bg-slate-50/70"}`}
+                      >
+                        {/* Checkbox */}
+                        <td className="pl-4 pr-2 py-4 w-10">
+                          <button
+                            type="button"
+                            onClick={() => toggleOne(user.id)}
+                            className="text-slate-300 hover:text-indigo-600 transition-colors"
+                          >
+                            {isSelected ? (
+                              <CheckSquare className="w-4 h-4 text-indigo-600" />
+                            ) : (
+                              <Square className="w-4 h-4" />
                             )}
+                          </button>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div>
+                            <p className="text-sm font-semibold text-slate-800">
+                              {user.lastName} {user.firstName}
+                            </p>
+                            <p className="text-xs text-slate-400 mt-0.5">{user.email}</p>
                           </div>
-                        ) : (
-                          <span className="text-slate-300">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-4 text-sm text-slate-600 whitespace-nowrap">
-                        {user.jobHuntStatus ? (JOB_HUNT_STATUS_LABELS[user.jobHuntStatus] ?? "—") : "—"}
-                      </td>
-                      <td className="px-4 py-4 text-sm text-slate-600 whitespace-nowrap">
-                        {user.prefecture || "—"}
-                      </td>
-                      <td className="px-4 py-4 text-sm text-slate-600 whitespace-nowrap">
-                        {formatDate(user.createdAt)}
-                      </td>
-                      <td className="px-4 py-4 text-sm text-slate-700 font-bold">
-                        {user.resumeCount}
-                      </td>
-                      <td className="px-4 py-4 text-sm text-indigo-600 font-bold">
-                        {user.pdfDownloadCount}
-                      </td>
-                      <td className="px-4 py-4 text-sm text-slate-700 font-bold">
-                        {user.actionCount}
-                      </td>
-                      <td className="px-4 py-4 text-right">
-                        <Link
-                          href={`/admin/users/${user.id}`}
-                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors"
-                        >
-                          <ExternalLink className="w-3 h-3" />
-                          詳細
-                        </Link>
-                      </td>
-                    </tr>
-                  ))
+                        </td>
+                        <td className="px-4 py-4 text-sm text-slate-600 whitespace-nowrap">
+                          {user.educationLevel ? (EDUCATION_LEVEL_LABELS[user.educationLevel] ?? "—") : "—"}
+                        </td>
+                        <td className="px-4 py-4">
+                          {user.universityName ? (
+                            <div>
+                              <p className="text-sm text-slate-700">{user.universityName}</p>
+                              {getUniversityRank(user.universityName) !== null && (
+                                <span className="text-xs text-indigo-600 font-semibold">#{getUniversityRank(user.universityName)}</span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-slate-300">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-4 text-sm text-slate-600 whitespace-nowrap">
+                          {user.jobHuntStatus ? (JOB_HUNT_STATUS_LABELS[user.jobHuntStatus] ?? "—") : "—"}
+                        </td>
+                        <td className="px-4 py-4 text-sm text-slate-600 whitespace-nowrap">
+                          {user.prefecture || "—"}
+                        </td>
+                        <td className="px-4 py-4 text-sm text-slate-600 whitespace-nowrap">
+                          {formatDate(user.createdAt)}
+                        </td>
+                        <td className="px-4 py-4 text-sm text-slate-700 font-bold">
+                          {user.resumeCount}
+                        </td>
+                        <td className="px-4 py-4 text-sm text-indigo-600 font-bold">
+                          {user.pdfDownloadCount}
+                        </td>
+                        <td className="px-4 py-4 text-sm text-slate-700 font-bold">
+                          {user.actionCount}
+                        </td>
+                        <td className="px-4 py-4 text-right">
+                          <Link
+                            href={`/admin/users/${user.id}`}
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            詳細
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -469,6 +770,15 @@ export function UsersClient() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Bulk Email Modal */}
+      {showEmailModal && (
+        <BulkEmailModal
+          selectedIds={selectedIds}
+          selectedUsers={selectedUsers}
+          onClose={() => setShowEmailModal(false)}
+        />
       )}
     </div>
   );

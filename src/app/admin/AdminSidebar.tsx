@@ -11,12 +11,14 @@ import {
   BookOpen,
   Mail,
   ClipboardList,
+  BarChart2,
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 
 const NAV_ITEMS = [
   { href: "/admin", label: "ダッシュボード", icon: LayoutDashboard, exact: true },
   { href: "/admin/users", label: "ユーザー管理", icon: Users, exact: false },
+  { href: "/admin/analytics", label: "アクセス分析", icon: BarChart2, exact: false },
   { href: "/admin/articles", label: "記事管理", icon: BookOpen, exact: false },
   { href: "/admin/campaigns", label: "キャンペーン", icon: Mail, exact: false },
   { href: "/admin/operation-logs", label: "操作ログ", icon: ClipboardList, exact: false },
