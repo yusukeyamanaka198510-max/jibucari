@@ -33,7 +33,7 @@ export function YearMonthSelector({
   onYearChange,
   onMonthChange,
   minYear = 1950,
-  maxYear = new Date().getFullYear(),
+  maxYear = new Date().getFullYear() + 2,
   className,
   disabled,
 }: YearMonthSelectorProps) {

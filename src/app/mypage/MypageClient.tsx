@@ -45,7 +45,7 @@ const PREFECTURES = [
   "熊本県","大分県","宮崎県","鹿児島県","沖縄県",
 ];
 
-const YEARS = Array.from({ length: 80 }, (_, i) => new Date().getFullYear() - i);
+const YEARS = Array.from({ length: 82 }, (_, i) => new Date().getFullYear() + 2 - i);
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 
 type ProfileForm = Omit<UserProfileData, "id"> & {
