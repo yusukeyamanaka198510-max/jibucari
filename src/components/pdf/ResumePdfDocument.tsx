@@ -1,9 +1,12 @@
 import {
   Document, Page, Text, View, Image, StyleSheet, Font,
 } from "@react-pdf/renderer";
-import type { Resume } from "@/types";
+import type { Resume, EducationEntry, WorkEntry, LicenseEntry } from "@/types";
 import { calculateAge } from "@/domain/entities/resume";
 
+// ─── フォント登録 ──────────────────────────────────────────────────────────────
+// ブラウザ: /fonts/... (HTTP fetch)
+// サーバー: Font.register をルートで上書きするか file:// URL を使う
 Font.register({
   family: "NotoSansJP",
   fonts: [
@@ -12,398 +15,345 @@ Font.register({
   ],
 });
 
-// ─── 和暦 ────────────────────────────────────────────────────────────────────
-function eraYear(year: number, month: number): string {
-  const d = new Date(year, month - 1, 1);
-  if (d >= new Date(2019, 4, 1))  return `令和${year - 2018}`;
-  if (d >= new Date(1989, 0, 8))  return `平成${year - 1988}`;
-  if (d >= new Date(1926, 0, 25)) return `昭和${year - 1925}`;
-  return `大正${year - 1911}`;
+// ─── デザイントークン ──────────────────────────────────────────────────────────
+const FONT      = "NotoSansJP";
+const B_OUTER   = "1.2 solid #222";   // 外枠
+const B_INNER   = "0.75 solid #444";  // 内罫線
+const LABEL_BG  = "#E6E6E6";
+const TEXT_DARK = "#111";
+const TEXT_SUB  = "#555";
+
+// ─── 日付・年齢ユーティリティ ──────────────────────────────────────────────────
+function todayJa(): string {
+  const d = new Date();
+  return `${d.getFullYear()}年 ${d.getMonth() + 1}月 ${d.getDate()}日 現在`;
 }
 
 function birthJa(dateStr: string): string {
   if (!dateStr) return "";
   const d = new Date(dateStr);
-  const y = d.getFullYear(), m = d.getMonth() + 1, dd = d.getDate();
-  let era = "昭和", eraY = y - 1925;
-  if (d >= new Date(2019, 4, 1)) { era = "令和";  eraY = y - 2018; }
-  else if (d >= new Date(1989, 0, 8)) { era = "平成"; eraY = y - 1988; }
-  return `${era}${eraY}年${m}月${dd}日生`;
+  return `${d.getFullYear()}年 ${d.getMonth() + 1}月 ${d.getDate()}日生`;
 }
 
-function todayJa(): string {
-  const d = new Date();
-  const y = d.getFullYear(), m = d.getMonth() + 1, dd = d.getDate();
-  const era = y >= 2019 ? `令和${y - 2018}` : y >= 1989 ? `平成${y - 1988}` : `昭和${y - 1925}`;
-  return `${era}年${m}月${dd}日 現在`;
+function fmtYear(year: number): string {
+  return String(year);
 }
 
-// ─── スタイル ─────────────────────────────────────────────────────────────────
-// セル間の二重罫線を避けるため、コンテナに borderTop+borderLeft を持たせ、
-// 各セルは borderRight+borderBottom のみ持つ構造にしている。
-const B   = "1 solid #111";     // 罫線（やぎし準拠：太め・黒）
-const LBG = "#E8E8E8";          // ラベルセル背景（薄グレー）
-const SBG = "#CCCCCC";          // セクション区切り行背景
+// ─── 学歴テキスト生成 ──────────────────────────────────────────────────────────
+const ENTRY_LABEL: Record<string, string> = { enrolled: "入学", transferred_in: "転入学" };
+const EXIT_LABEL:  Record<string, string> = {
+  graduated: "卒業", dropped_out: "中途退学", transferred: "転学",
+  study_abroad: "留学", "": "卒業",
+};
 
+function eduEntryText(e: EducationEntry): string {
+  return [e.school, e.faculty, e.department].filter(Boolean).join(" ") +
+    "　" + (ENTRY_LABEL[e.entryType] ?? "入学");
+}
+function eduExitText(e: EducationEntry): string {
+  return [e.school, e.faculty].filter(Boolean).join(" ") +
+    "　" + (EXIT_LABEL[e.exitType ?? "graduated"]);
+}
+
+// ─── licenses → テキスト ───────────────────────────────────────────────────────
+function licensesToText(licenses: LicenseEntry[]): string {
+  return licenses.map((l) => l.name).join("　");
+}
+
+// ─── workHistory → アルバイト経験テキスト ─────────────────────────────────────
+function workToText(work: WorkEntry[]): string {
+  return work.map((w) => {
+    const parts = [w.company, w.department, w.position].filter(Boolean).join(" ");
+    const period = w.isCurrent
+      ? `${w.entryYear}年〜現在`
+      : w.exitYear
+        ? `${w.entryYear}年〜${w.exitYear}年`
+        : `${w.entryYear}年〜`;
+    return `${parts}（${period}）`;
+  }).join("\n");
+}
+
+// ─── 長文フォントサイズ調整 ────────────────────────────────────────────────────
+function adaptFontSize(text: string, base = 9, threshold = 120, min = 7): number {
+  if (!text || text.length <= threshold) return base;
+  const ratio = threshold / text.length;
+  return Math.max(min, Math.round(base * ratio * 10) / 10);
+}
+
+// ─── スタイル ──────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
   page: {
-    fontFamily: "NotoSansJP",
-    fontSize: 9,
-    padding: "12mm 10mm 10mm",
-    color: "#111",
-    lineHeight: 1.45,
+    fontFamily:  FONT,
+    fontSize:    9,
+    color:       TEXT_DARK,
+    lineHeight:  1.5,
+    paddingTop:    "14mm",
+    paddingBottom: "12mm",
+    paddingLeft:   "13mm",
+    paddingRight:  "13mm",
+    backgroundColor: "#fff",
   },
 
-  // ヘッダー（タイトル左揃え・日付右揃えを同行に配置）
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    marginBottom: 5,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: 700,
-    letterSpacing: 10,
-  },
-  dateRow: {
-    flex: 1,
-    fontSize: 8,
-    textAlign: "right",
-    color: "#555",
-  },
+  // ── ヘッダー ──
+  headerRow: { flexDirection: "row", alignItems: "flex-end", marginBottom: 5 },
+  headerTitle: { fontSize: 17, fontWeight: 700, color: TEXT_DARK },
+  headerDate:  { flex: 1, textAlign: "right", fontSize: 8, color: TEXT_SUB },
 
-  // 汎用行
+  // ── 汎用行 ──
   row: { flexDirection: "row" },
 
-  // ─── 基本情報テーブルのセル ───────────────────────────────
-  // ラベルセル（薄グレー背景、中央寄せ）
-  lc: {
-    backgroundColor: LBG,
-    borderRight: B, borderBottom: B,
-    padding: "2 3",
+  // ── 個人情報ブロック（左70% / 右30%）──
+  personalLeft:  { flex: 7, borderTop: B_OUTER, borderLeft: B_OUTER },
+  personalRight: { flex: 3, borderTop: B_OUTER, borderLeft: B_INNER, borderRight: B_OUTER, borderBottom: B_OUTER },
+
+  // ── 個人情報内セル ──
+  piLabelCell: {
+    backgroundColor: LABEL_BG,
+    borderRight: B_INNER, borderBottom: B_INNER,
+    width: 52, padding: "2 3",
+    justifyContent: "center", alignItems: "center",
+    fontSize: 8, color: "#333", lineHeight: 1.3,
+  },
+  piValueCell: {
+    flex: 1,
+    borderRight: B_OUTER, borderBottom: B_INNER,
+    padding: "2.5 4",
     justifyContent: "center",
+  },
+  piValueCellLast: {
+    flex: 1,
+    borderRight: B_OUTER, borderBottom: B_OUTER,
+    padding: "2.5 4",
+    justifyContent: "center",
+  },
+
+  // ── 写真欄 ──
+  photoArea: {
+    flex: 1,
     alignItems: "center",
-    fontSize: 8,
-    color: "#333",
-    lineHeight: 1.3,
+    justifyContent: "center",
+    padding: 4,
   },
-  // 値セル（白背景）
-  vc: {
-    borderRight: B, borderBottom: B,
-    padding: "2 4",
-  },
+  photoPlaceholder: { fontSize: 7, color: "#aaa", textAlign: "center", lineHeight: 2 },
 
-  // ─── 学歴・職歴テーブルのセル ────────────────────────────
-  yr: {  // 年セル
-    width: 38,
-    borderRight: B, borderBottom: B,
-    padding: "2 2",
-    textAlign: "center",
-    fontSize: 8.5,
+  // ── Email行 ──
+  emailRow: {
+    flexDirection: "row",
+    borderTop: B_INNER, borderLeft: B_OUTER, borderRight: B_OUTER, borderBottom: B_INNER,
   },
-  mo: {  // 月セル
-    width: 18,
-    borderRight: B, borderBottom: B,
-    padding: "2 1",
-    textAlign: "center",
-    fontSize: 8.5,
+  emailLabel: {
+    backgroundColor: LABEL_BG,
+    width: 52, padding: "2 3",
+    justifyContent: "center", alignItems: "center",
+    borderRight: B_INNER,
+    fontSize: 8, color: "#333",
   },
-  ec: {  // 内容セル
-    flex: 1,
-    borderRight: B, borderBottom: B,
-    padding: "2 5",
-  },
-  // セクション区切り行（「学　歴」「職　歴」表示）
-  divRow: {
-    backgroundColor: SBG,
-    borderRight: B, borderBottom: B,
-    flex: 1,
-    padding: "2 5",
-    textAlign: "center",
-    fontWeight: 700,
-    fontSize: 9,
-    letterSpacing: 4,
-  },
+  emailValue: { flex: 1, padding: "2.5 4", justifyContent: "center", fontSize: 8.5 },
 
-  // ─── 志望動機・自己PRのテキストボックス ──────────────────
-  boxTitle: {
-    backgroundColor: LBG,
-    borderRight: B, borderBottom: B,
-    borderLeft: B,
-    padding: "2 5",
-    fontWeight: 700,
-    fontSize: 8.5,
+  // ── 学歴テーブル ──
+  eduContainer: {
+    borderTop: B_INNER, borderLeft: B_OUTER,
+    marginTop: 0,
   },
-  box: {
-    borderRight: B, borderBottom: B,
-    borderLeft: B,
-    padding: "4 5",
-    minHeight: 52,
-    marginBottom: 4,
+  eduHeaderYear:    { width: 48, backgroundColor: LABEL_BG, borderRight: B_INNER, borderBottom: B_INNER, padding: "2 2", textAlign: "center", fontSize: 8, fontWeight: 700 },
+  eduHeaderMonth:   { width: 28, backgroundColor: LABEL_BG, borderRight: B_INNER, borderBottom: B_INNER, padding: "2 2", textAlign: "center", fontSize: 8, fontWeight: 700 },
+  eduHeaderContent: { flex: 1,   backgroundColor: LABEL_BG, borderRight: B_OUTER, borderBottom: B_INNER, padding: "2 5", textAlign: "center", fontSize: 8, fontWeight: 700 },
+  eduYear:    { width: 48, borderRight: B_INNER, borderBottom: B_INNER, padding: "2 2", textAlign: "center", fontSize: 9 },
+  eduMonth:   { width: 28, borderRight: B_INNER, borderBottom: B_INNER, padding: "2 2", textAlign: "center", fontSize: 9 },
+  eduContent: { flex: 1,   borderRight: B_OUTER, borderBottom: B_INNER, padding: "2 5", fontSize: 9 },
+
+  // ── 詳細テーブル ──
+  detailContainer: { borderTop: B_INNER, borderLeft: B_OUTER },
+  detailLabel: {
+    width: 52,
+    backgroundColor: LABEL_BG,
+    borderRight: B_INNER, borderBottom: B_INNER,
+    padding: "3 2",
+    alignItems: "center", justifyContent: "center",
+    fontSize: 8, lineHeight: 1.4,
+  },
+  detailValue: {
+    flex: 1,
+    borderRight: B_OUTER, borderBottom: B_INNER,
+    padding: "3 5",
   },
 });
 
-const GENDER: Record<string, string> = {
-  male: "男", female: "女", other: "その他", prefer_not_to_say: "―",
-};
-const ENTRY: Record<string, string> = { enrolled: "入学", transferred_in: "転入" };
-const EXIT:  Record<string, string> = { graduated: "卒業", dropped_out: "中退", transferred: "転学" };
+// ─── サブコンポーネント ────────────────────────────────────────────────────────
 
-export function ResumePdfDocument({ resume }: { resume: Resume }) {
-  const { personalInfo: pi, education, workHistory, licenses } = resume;
+function EntrySheetHeader({ date }: { date: string }) {
+  return (
+    <View style={s.headerRow}>
+      <Text style={s.headerTitle}>エントリーシート</Text>
+      <Text style={s.headerDate}>{date}</Text>
+    </View>
+  );
+}
+
+function ProfilePhoto({ url }: { url?: string }) {
+  return (
+    <View style={s.photoArea}>
+      {url ? (
+        <Image
+          src={url}
+          style={{ width: 90, height: 120, objectFit: "contain" }}
+        />
+      ) : (
+        <View style={{ width: 90, height: 120, borderWidth: 0.5, borderColor: "#ccc", alignItems: "center", justifyContent: "center" }}>
+          <Text style={s.photoPlaceholder}>証明写真{"\n"}縦4cm×横3cm</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+function PersonalInformationSection({ resume }: { resume: Resume }) {
+  const pi = resume.personalInfo;
   const age = calculateAge(pi.birthDate);
+  const address = [
+    pi.postalCode ? `〒${pi.postalCode}` : "",
+    pi.prefecture, pi.city, pi.streetAddress, pi.building,
+  ].filter(Boolean).join(" ");
 
   return (
-    <Document title={resume.title} author={`${pi.lastName} ${pi.firstName}`}>
-      <Page size="A4" style={s.page}>
-
-        {/* ────────────────── タイトル ────────────────── */}
-        <View style={s.titleRow}>
-          <Text style={s.title}>履　歴　書</Text>
-          <Text style={s.dateRow}>{todayJa()}</Text>
-        </View>
-
-        {/* ────────────────── 基本情報 ────────────────── */}
-        {/*
-          構造：
-            コンテナ（borderTop+borderLeft）
-              左側フレックス（個人情報グリッド）
-              右側（写真欄、borderLeft+borderBottom+borderRight）
-        */}
-        <View style={{ flexDirection: "row", borderTop: B, borderLeft: B, marginBottom: 5 }}>
-
-          {/* 左：個人情報グリッド */}
-          <View style={{ flex: 1 }}>
-
-            {/* ふりがな */}
-            <View style={s.row}>
-              <View style={[s.lc, { width: 52 }]}><Text>ふりがな</Text></View>
-              <View style={[s.vc, { flex: 1, fontSize: 7 }]}>
-                <Text>{pi.lastNameKana}　{pi.firstNameKana}</Text>
-              </View>
-            </View>
-
-            {/* 氏名 */}
-            <View style={s.row}>
-              <View style={[s.lc, { width: 52 }]}><Text>氏　名</Text></View>
-              <View style={[s.vc, { flex: 1, paddingVertical: 5 }]}>
-                <Text style={{ fontSize: 16, fontWeight: 700 }}>
-                  {pi.lastName}　{pi.firstName}
-                </Text>
-              </View>
-            </View>
-
-            {/* 生年月日・性別 */}
-            <View style={s.row}>
-              <View style={[s.lc, { width: 52 }]}><Text>生年月日</Text></View>
-              <View style={[s.vc, { width: 108 }]}>
-                <Text>{birthJa(pi.birthDate)}</Text>
-                {age > 0 && (
-                  <Text style={{ fontSize: 7.5, color: "#555" }}>（満{age}歳）</Text>
-                )}
-              </View>
-              <View style={[s.lc, { width: 28 }]}><Text>性別</Text></View>
-              <View style={[s.vc, { flex: 1 }]}>
-                <Text>{GENDER[pi.gender] ?? ""}</Text>
-              </View>
-            </View>
-
-            {/* 住所ふりがな */}
-            <View style={s.row}>
-              <View style={[s.lc, { width: 52 }]}><Text>住所ふりがな</Text></View>
-              <View style={[s.vc, { flex: 1, fontSize: 7 }]}>
-                <Text>{pi.addressKana}</Text>
-              </View>
-            </View>
-
-            {/* 現住所 */}
-            <View style={s.row}>
-              <View style={[s.lc, { width: 52 }]}><Text>現住所</Text></View>
-              <View style={[s.vc, { flex: 1 }]}>
-                <Text>〒{pi.postalCode}　{pi.prefecture}{pi.city}{pi.streetAddress}{pi.building ? `　${pi.building}` : ""}</Text>
-              </View>
-            </View>
-
-            {/* 電話・メール */}
-            <View style={s.row}>
-              <View style={[s.lc, { width: 52 }]}><Text>携帯電話</Text></View>
-              <View style={[s.vc, { width: 98 }]}><Text>{pi.mobilePhone}</Text></View>
-              <View style={[s.lc, { width: 36 }]}><Text>メール</Text></View>
-              <View style={[s.vc, { flex: 1, fontSize: 7 }]}><Text>{pi.email}</Text></View>
-            </View>
-
+    <View style={s.row}>
+      {/* 左：個人情報グリッド */}
+      <View style={s.personalLeft}>
+        {/* ふりがな */}
+        <View style={s.row}>
+          <View style={s.piLabelCell}><Text>ふりがな</Text></View>
+          <View style={[s.piValueCell, { fontSize: 8 }]}>
+            <Text>{pi.lastNameKana}　{pi.firstNameKana}</Text>
           </View>
-
-          {/* 右：写真欄 */}
-          <View style={{
-            width: 86,
-            borderLeft: B,
-            borderBottom: B,
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: "#fafafa",
-          }}>
-            {pi.photoUrl ? (
-              <Image src={pi.photoUrl} style={{ width: 82, height: 108, objectFit: "cover" }} />
-            ) : (
-              <View style={{ alignItems: "center" }}>
-                <Text style={{ fontSize: 7, color: "#bbb", textAlign: "center", lineHeight: 1.8 }}>写真貼付欄</Text>
-                <Text style={{ fontSize: 6, color: "#ccc", textAlign: "center" }}>縦4cm×横3cm</Text>
-              </View>
+        </View>
+        {/* 氏名 */}
+        <View style={s.row}>
+          <View style={s.piLabelCell}><Text>氏名</Text></View>
+          <View style={[s.piValueCell, { paddingVertical: 5 }]}>
+            <Text style={{ fontSize: 15, fontWeight: 700 }}>{pi.lastName}　{pi.firstName}</Text>
+          </View>
+        </View>
+        {/* 生年月日 */}
+        <View style={s.row}>
+          <View style={s.piLabelCell}><Text>生年月日</Text></View>
+          <View style={s.piValueCell}>
+            <Text>{birthJa(pi.birthDate)}</Text>
+            {age > 0 && (
+              <Text style={{ fontSize: 7.5, color: TEXT_SUB }}>（満{age}歳）</Text>
             )}
           </View>
-
         </View>
-
-        {/* ────────────────── 学歴・職歴（合算テーブル）────────────────── */}
-        <View style={{ borderTop: B, borderLeft: B, marginBottom: 5 }}>
-
-          {/* 列見出し */}
-          <View style={s.row}>
-            <View style={[s.lc, { width: 34 }]}><Text>年</Text></View>
-            <View style={[s.lc, { width: 16 }]}><Text>月</Text></View>
-            <View style={[s.lc, { flex: 1, textAlign: "center", letterSpacing: 4 }]}>
-              <Text>学　歴　　　　職　歴</Text>
-            </View>
+        {/* 住所ふりがな */}
+        <View style={s.row}>
+          <View style={s.piLabelCell}><Text>住所{"\n"}ふりがな</Text></View>
+          <View style={[s.piValueCell, { fontSize: 8 }]}>
+            <Text>{pi.addressKana}</Text>
           </View>
-
-          {/* 学歴 */}
-          {education.length > 0 && (
-            <>
-              {/* 「学　歴」区切り */}
-              <View style={s.row}>
-                <View style={[s.yr, { backgroundColor: SBG }]}><Text> </Text></View>
-                <View style={[s.mo, { backgroundColor: SBG }]}><Text> </Text></View>
-                <View style={s.divRow}><Text>学　　　歴</Text></View>
-              </View>
-
-              {education.filter((e) => e.school?.trim()).map((e) => (
-                <View key={e.id}>
-                  <View style={s.row}>
-                    <View style={s.yr}><Text>{eraYear(e.entryYear, e.entryMonth)}</Text></View>
-                    <View style={s.mo}><Text>{e.entryMonth}</Text></View>
-                    <View style={s.ec}>
-                      <Text>
-                        {e.school}
-                        {e.faculty ? `　${e.faculty}` : ""}
-                        {e.department ? `　${e.department}` : ""}
-                        　{ENTRY[e.entryType] ?? "入学"}
-                      </Text>
-                    </View>
-                  </View>
-                  {e.exitYear != null && (
-                    <View style={s.row}>
-                      <View style={s.yr}><Text>{eraYear(e.exitYear, e.exitMonth ?? 3)}</Text></View>
-                      <View style={s.mo}><Text>{e.exitMonth ?? 3}</Text></View>
-                      <View style={s.ec}>
-                        <Text>{e.school}　{EXIT[e.exitType ?? "graduated"] ?? "卒業"}</Text>
-                      </View>
-                    </View>
-                  )}
-                </View>
-              ))}
-            </>
-          )}
-
-          {/* 職歴 */}
-          {/* 「職　歴」区切り */}
-          <View style={s.row}>
-            <View style={[s.yr, { backgroundColor: SBG }]}><Text> </Text></View>
-            <View style={[s.mo, { backgroundColor: SBG }]}><Text> </Text></View>
-            <View style={s.divRow}><Text>職　　　歴</Text></View>
+        </View>
+        {/* 現住所 */}
+        <View style={s.row}>
+          <View style={[s.piLabelCell, { borderBottom: B_OUTER }]}><Text>現住所</Text></View>
+          <View style={[s.piValueCellLast]}>
+            <Text style={{ fontSize: 8.5 }}>{address}</Text>
           </View>
+        </View>
+      </View>
 
-          {workHistory.length === 0 && (
+      {/* 右：写真 */}
+      <View style={s.personalRight}>
+        <ProfilePhoto url={pi.photoUrl} />
+      </View>
+    </View>
+  );
+}
+
+function EmailRow({ email }: { email: string }) {
+  return (
+    <View style={s.emailRow}>
+      <View style={s.emailLabel}><Text>Email</Text></View>
+      <View style={s.emailValue}><Text>{email}</Text></View>
+    </View>
+  );
+}
+
+function EducationTable({ education }: { education: EducationEntry[] }) {
+  return (
+    <View style={s.eduContainer}>
+      {/* ヘッダー行 */}
+      <View style={s.row}>
+        <View style={s.eduHeaderYear}><Text>年</Text></View>
+        <View style={s.eduHeaderMonth}><Text>月</Text></View>
+        <View style={s.eduHeaderContent}><Text>学　歴</Text></View>
+      </View>
+      {/* 学歴データ行 */}
+      {education.filter((e) => e.school?.trim()).map((e) => (
+        <View key={e.id}>
+          {/* 入学行 */}
+          <View style={s.row}>
+            <View style={s.eduYear}><Text>{fmtYear(e.entryYear)}</Text></View>
+            <View style={s.eduMonth}><Text>{e.entryMonth}</Text></View>
+            <View style={s.eduContent}><Text>{eduEntryText(e)}</Text></View>
+          </View>
+          {/* 卒業/退学行 */}
+          {e.exitYear != null && (
             <View style={s.row}>
-              <View style={s.yr}><Text> </Text></View>
-              <View style={s.mo}><Text> </Text></View>
-              <View style={[s.ec, { color: "#999" }]}><Text>なし</Text></View>
+              <View style={s.eduYear}><Text>{fmtYear(e.exitYear)}</Text></View>
+              <View style={s.eduMonth}><Text>{e.exitMonth ?? 3}</Text></View>
+              <View style={s.eduContent}><Text>{eduExitText(e)}</Text></View>
             </View>
           )}
-
-          {workHistory.map((w) => (
-            <View key={w.id}>
-              <View style={s.row}>
-                <View style={s.yr}><Text>{eraYear(w.entryYear, w.entryMonth)}</Text></View>
-                <View style={s.mo}><Text>{w.entryMonth}</Text></View>
-                <View style={s.ec}>
-                  <Text>
-                    {w.company}
-                    {w.department ? `　${w.department}` : ""}
-                    {w.position ? `　${w.position}` : ""}
-                    　入社
-                  </Text>
-                </View>
-              </View>
-              {(w.isCurrent || w.exitYear != null) && (
-                <View style={s.row}>
-                  <View style={s.yr}>
-                    <Text>{w.isCurrent ? "" : eraYear(w.exitYear!, w.exitMonth ?? 3)}</Text>
-                  </View>
-                  <View style={s.mo}>
-                    <Text>{w.isCurrent ? "" : String(w.exitMonth ?? 3)}</Text>
-                  </View>
-                  <View style={s.ec}>
-                    <Text>{w.isCurrent ? "現在に至る" : "同社　退職"}</Text>
-                  </View>
-                </View>
-              )}
-            </View>
-          ))}
-
-          {/* 以上 */}
-          <View style={s.row}>
-            <View style={[s.yr, { borderRight: "none" }]}><Text> </Text></View>
-            <View style={[s.mo, { borderRight: "none" }]}><Text> </Text></View>
-            <View style={[s.ec, { textAlign: "right" }]}><Text>以　上</Text></View>
-          </View>
-
         </View>
+      ))}
+    </View>
+  );
+}
 
-        {/* ────────────────── 免許・資格 ────────────────── */}
-        {licenses.length > 0 && (
-          <View style={{ borderTop: B, borderLeft: B, marginBottom: 5 }}>
-            <View style={s.row}>
-              <View style={[s.lc, { width: 34 }]}><Text>年</Text></View>
-              <View style={[s.lc, { width: 16 }]}><Text>月</Text></View>
-              <View style={[s.lc, { flex: 1, textAlign: "center" }]}><Text>免許・資格</Text></View>
-            </View>
-            {licenses.map((l) => (
-              <View key={l.id} style={s.row}>
-                <View style={s.yr}><Text>{eraYear(l.year, l.month)}</Text></View>
-                <View style={s.mo}><Text>{l.month}</Text></View>
-                <View style={s.ec}><Text>{l.name}　取得</Text></View>
-              </View>
-            ))}
-          </View>
-        )}
+function DetailRow({
+  label, value, minHeight = 36,
+}: {
+  label: string; value?: string; minHeight?: number;
+}) {
+  const text = value ?? "";
+  const fs = adaptFontSize(text);
+  return (
+    <View style={s.row} wrap={false}>
+      <View style={[s.detailLabel, { minHeight }]}>
+        <Text style={{ textAlign: "center" }}>{label}</Text>
+      </View>
+      <View style={[s.detailValue, { minHeight }]}>
+        <Text style={{ fontSize: fs, lineHeight: 1.5 }}>{text}</Text>
+      </View>
+    </View>
+  );
+}
 
-        {/* ────────────────── 志望動機 ────────────────── */}
-        <View style={{ borderTop: B, marginBottom: 5 }}>
-          <View style={s.boxTitle}><Text>志望動機</Text></View>
-          <View style={[s.box, { borderTop: "none" }]}>
-            <Text>{resume.motivation || "　"}</Text>
-          </View>
-        </View>
+function EntrySheetDetailTable({ resume }: { resume: Resume }) {
+  const qualifications = licensesToText(resume.licenses);
+  const workExp = workToText(resume.workHistory);
 
-        {/* ────────────────── 自己PR ────────────────── */}
-        <View style={{ borderTop: B, marginBottom: 5 }}>
-          <View style={s.boxTitle}><Text>自己ＰＲ</Text></View>
-          <View style={[s.box, { borderTop: "none" }]}>
-            <Text>{resume.selfPR || "　"}</Text>
-          </View>
-        </View>
+  return (
+    <View style={s.detailContainer}>
+      <DetailRow label={"ゼミ・\n研究テーマ"} value=""          minHeight={52} />
+      <DetailRow label={"クラブ・\nサークル"}  value=""          minHeight={48} />
+      <DetailRow label={"保有資格"}            value={qualifications} minHeight={28} />
+      <DetailRow label={"趣味・特技"}          value={resume.hobbies} minHeight={28} />
+      <DetailRow label={"アルバイト\n経験"}    value={workExp}   minHeight={52} />
+      <DetailRow label={"自己PR"}             value={resume.selfPR}  minHeight={80} />
+      <DetailRow label={"志望動機"}            value={resume.motivation} minHeight={88} />
+    </View>
+  );
+}
 
-        {/* ────────────────── 趣味・特技 ────────────────── */}
-        {resume.hobbies && (
-          <View style={{ borderTop: B }}>
-            <View style={s.boxTitle}><Text>趣味・特技</Text></View>
-            <View style={[s.box, { borderTop: "none", minHeight: 28 }]}>
-              <Text>{resume.hobbies}</Text>
-            </View>
-          </View>
-        )}
-
+// ─── メインエクスポート ────────────────────────────────────────────────────────
+export function ResumePdfDocument({ resume }: { resume: Resume }) {
+  return (
+    <Document title={resume.title} author={`${resume.personalInfo.lastName} ${resume.personalInfo.firstName}`}>
+      <Page size="A4" style={s.page}>
+        <EntrySheetHeader date={todayJa()} />
+        <PersonalInformationSection resume={resume} />
+        <EmailRow email={resume.personalInfo.email} />
+        <EducationTable education={resume.education} />
+        <EntrySheetDetailTable resume={resume} />
       </Page>
     </Document>
   );
