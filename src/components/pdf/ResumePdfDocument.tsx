@@ -41,32 +41,35 @@ function todayJa(): string {
 // ─── スタイル ─────────────────────────────────────────────────────────────────
 // セル間の二重罫線を避けるため、コンテナに borderTop+borderLeft を持たせ、
 // 各セルは borderRight+borderBottom のみ持つ構造にしている。
-const B   = "0.5 solid #444";   // 罫線
-const LBG = "#F0F0F0";          // ラベルセル背景（薄グレー）
-const SBG = "#E8E8E8";          // セクション区切り行背景
+const B   = "1 solid #111";     // 罫線（やぎし準拠：太め・黒）
+const LBG = "#E8E8E8";          // ラベルセル背景（薄グレー）
+const SBG = "#CCCCCC";          // セクション区切り行背景
 
 const s = StyleSheet.create({
   page: {
     fontFamily: "NotoSansJP",
-    fontSize: 8,
+    fontSize: 9,
     padding: "12mm 10mm 10mm",
     color: "#111",
     lineHeight: 1.45,
   },
 
-  // ヘッダー
+  // ヘッダー（タイトル左揃え・日付右揃えを同行に配置）
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    marginBottom: 5,
+  },
   title: {
     fontSize: 18,
     fontWeight: 700,
-    textAlign: "center",
     letterSpacing: 10,
-    marginBottom: 3,
   },
   dateRow: {
-    fontSize: 7,
+    flex: 1,
+    fontSize: 8,
     textAlign: "right",
     color: "#555",
-    marginBottom: 5,
   },
 
   // 汎用行
@@ -80,7 +83,7 @@ const s = StyleSheet.create({
     padding: "2 3",
     justifyContent: "center",
     alignItems: "center",
-    fontSize: 7,
+    fontSize: 8,
     color: "#333",
     lineHeight: 1.3,
   },
@@ -92,18 +95,18 @@ const s = StyleSheet.create({
 
   // ─── 学歴・職歴テーブルのセル ────────────────────────────
   yr: {  // 年セル
-    width: 34,
+    width: 38,
     borderRight: B, borderBottom: B,
     padding: "2 2",
     textAlign: "center",
-    fontSize: 7.5,
+    fontSize: 8.5,
   },
   mo: {  // 月セル
-    width: 16,
+    width: 18,
     borderRight: B, borderBottom: B,
     padding: "2 1",
     textAlign: "center",
-    fontSize: 7.5,
+    fontSize: 8.5,
   },
   ec: {  // 内容セル
     flex: 1,
@@ -118,7 +121,7 @@ const s = StyleSheet.create({
     padding: "2 5",
     textAlign: "center",
     fontWeight: 700,
-    fontSize: 8,
+    fontSize: 9,
     letterSpacing: 4,
   },
 
@@ -129,13 +132,13 @@ const s = StyleSheet.create({
     borderLeft: B,
     padding: "2 5",
     fontWeight: 700,
-    fontSize: 7.5,
+    fontSize: 8.5,
   },
   box: {
     borderRight: B, borderBottom: B,
     borderLeft: B,
     padding: "4 5",
-    minHeight: 50,
+    minHeight: 52,
     marginBottom: 4,
   },
 });
@@ -155,8 +158,10 @@ export function ResumePdfDocument({ resume }: { resume: Resume }) {
       <Page size="A4" style={s.page}>
 
         {/* ────────────────── タイトル ────────────────── */}
-        <Text style={s.title}>履　歴　書</Text>
-        <Text style={s.dateRow}>{todayJa()}</Text>
+        <View style={s.titleRow}>
+          <Text style={s.title}>履　歴　書</Text>
+          <Text style={s.dateRow}>{todayJa()}</Text>
+        </View>
 
         {/* ────────────────── 基本情報 ────────────────── */}
         {/*
@@ -182,7 +187,7 @@ export function ResumePdfDocument({ resume }: { resume: Resume }) {
             <View style={s.row}>
               <View style={[s.lc, { width: 52 }]}><Text>氏　名</Text></View>
               <View style={[s.vc, { flex: 1, paddingVertical: 5 }]}>
-                <Text style={{ fontSize: 14, fontWeight: 700 }}>
+                <Text style={{ fontSize: 16, fontWeight: 700 }}>
                   {pi.lastName}　{pi.firstName}
                 </Text>
               </View>
@@ -194,7 +199,7 @@ export function ResumePdfDocument({ resume }: { resume: Resume }) {
               <View style={[s.vc, { width: 108 }]}>
                 <Text>{birthJa(pi.birthDate)}</Text>
                 {age > 0 && (
-                  <Text style={{ fontSize: 6.5, color: "#555" }}>（満{age}歳）</Text>
+                  <Text style={{ fontSize: 7.5, color: "#555" }}>（満{age}歳）</Text>
                 )}
               </View>
               <View style={[s.lc, { width: 28 }]}><Text>性別</Text></View>
