@@ -17,7 +17,7 @@ Font.register({
 const FONT     = "NotoSansJP";
 const B        = "0.8 solid #333";   // 通常罫線
 const B_OUTER  = "1.2 solid #222";   // 外枠
-const LABEL_BG = "#E2E2E2";
+const LABEL_BG = "#fff";
 const TXT      = "#111";
 const SUB      = "#555";
 
